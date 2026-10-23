@@ -1,0 +1,348 @@
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+
+export type AdminUser = {
+  id: string;
+  email: string;
+  role: string;
+  name: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  avatarUrl?: string | null;
+};
+
+async function parseJson(res: Response) {
+  return res.json().catch(() => ({}));
+}
+
+function authHeaders(token?: string | null): HeadersInit {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+export async function apiLogin(email: string, password: string) {
+  const res = await fetch(`${API_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Invalid email or password");
+  return data as { user: AdminUser; token: string };
+}
+
+export async function apiMe(token: string) {
+  const res = await fetch(`${API_URL}/auth/me`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Session expired");
+  return data as { user: AdminUser };
+}
+
+export async function apiGetOrders(token: string, status?: string) {
+  const q = status && status !== "all" ? `?status=${encodeURIComponent(status)}` : "";
+  const res = await fetch(`${API_URL}/orders${q}`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not load orders");
+  return data as { orders: AdminOrder[] };
+}
+
+export async function apiGetOrder(token: string, id: string) {
+  const res = await fetch(`${API_URL}/orders/${id}`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Order not found");
+  return data as { order: AdminOrder };
+}
+
+export async function apiUpdateOrderStatus(token: string, id: string, status: string) {
+  const res = await fetch(`${API_URL}/orders/${id}/status`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify({ status }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not update order");
+  return data as { order: AdminOrder };
+}
+
+export async function apiGetProducts(
+  token?: string | null,
+  opts?: { page?: number; limit?: number; q?: string }
+) {
+  const qs = new URLSearchParams({
+    admin: "true",
+    lean: "true",
+    page: String(opts?.page ?? 1),
+    limit: String(opts?.limit ?? 20),
+  });
+  if (opts?.q?.trim()) qs.set("q", opts.q.trim());
+
+  const res = await fetch(`${API_URL}/products?${qs}`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not load products");
+  return data as {
+    products: AdminProduct[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export async function apiGetProduct(idOrSlug: string) {
+  const res = await fetch(
+    `${API_URL}/products/${encodeURIComponent(idOrSlug)}?admin=true`,
+    { cache: "no-store" }
+  );
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Product not found");
+  return data as { product: AdminProduct };
+}
+
+export async function apiGetCategories() {
+  const res = await fetch(`${API_URL}/categories`, { cache: "no-store" });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not load categories");
+  return data as {
+    categories: { id: string; slug: string; name: string }[];
+  };
+}
+
+export async function apiCreateProduct(
+  token: string,
+  body: {
+    name: string;
+    slug: string;
+    description?: string;
+    image: string;
+    images?: string[];
+    price: number;
+    categorySlug: string;
+    category?: string;
+    stock?: number;
+    isFeatured?: boolean;
+    isNewArrival?: boolean;
+    active?: boolean;
+    colors?: string[];
+    subtitle?: string;
+  }
+) {
+  const res = await fetch(`${API_URL}/products`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not create product");
+  return data as { product: AdminProduct };
+}
+
+export async function apiUploadProductImage(token: string, file: File) {
+  const form = new FormData();
+  form.append("image", file);
+  const res = await fetch(`${API_URL}/products/upload-image`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form,
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not upload image");
+  return data as { url: string; publicId: string };
+}
+
+export type ProductWriteBody = {
+  name?: string;
+  slug?: string;
+  description?: string;
+  image?: string;
+  images?: string[];
+  price?: number;
+  categorySlug?: string;
+  category?: string;
+  stock?: number;
+  isFeatured?: boolean;
+  isNewArrival?: boolean;
+  active?: boolean;
+  colors?: string[];
+  subtitle?: string | null;
+  badge?: string | null;
+};
+
+export async function apiUpdateProduct(token: string, id: string, body: ProductWriteBody) {
+  const res = await fetch(`${API_URL}/products/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not update product");
+  return data as { product: AdminProduct };
+}
+
+export async function apiGetSettings(token: string) {
+  const res = await fetch(`${API_URL}/settings`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not load settings");
+  return data as { settings: AdminSettings };
+}
+
+export async function apiUpdateSettings(
+  token: string,
+  body: Partial<AdminSettings> & {
+    payments?: { paystack?: boolean; bankTransfer?: boolean };
+  }
+) {
+  const res = await fetch(`${API_URL}/settings`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not save settings");
+  return data as { settings: AdminSettings };
+}
+
+export type AdminOrder = {
+  id: string;
+  email: string;
+  items: {
+    name: string;
+    image: string;
+    price: number;
+    quantity: number;
+  }[];
+  subtotal: number;
+  fee: number;
+  total: number;
+  paymentMethod: string;
+  status: string;
+  receiptUrl?: string | null;
+  shipping?: {
+    fullName?: string;
+    phone?: string;
+    address?: string;
+  } | null;
+  invoiceNumber?: string | null;
+  createdAt: string;
+};
+
+export type AdminProduct = {
+  id: string;
+  slug: string;
+  name: string;
+  image: string;
+  images?: string[];
+  price: number;
+  description?: string;
+  category?: string | null;
+  categorySlug: string;
+  stock?: number;
+  active?: boolean;
+  isFeatured?: boolean;
+  isNewArrival?: boolean;
+  subtitle?: string | null;
+  badge?: string | null;
+  colors?: string[];
+  createdAt?: string;
+};
+
+export type AdminSettings = {
+  storeName: string;
+  storeAddress?: string;
+  storePhone?: string;
+  adminNotifyEmail?: string;
+  payments: { paystack: boolean; bankTransfer: boolean };
+};
+
+export type AdminCustomer = {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  avatarUrl?: string | null;
+  registeredAt: string;
+  orders: number;
+  status: "Active" | "Suspended";
+  active: boolean;
+};
+
+export type AdminStaff = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  dateAdded: string;
+  lastActive: string;
+  status: "Active" | "Inactive";
+  active: boolean;
+};
+
+export async function apiGetCustomers(token: string, q?: string) {
+  const qs = q?.trim() ? `?q=${encodeURIComponent(q.trim())}` : "";
+  const res = await fetch(`${API_URL}/admin/customers${qs}`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not load customers");
+  return data as { customers: AdminCustomer[] };
+}
+
+export async function apiGetCustomer(token: string, id: string) {
+  const res = await fetch(`${API_URL}/admin/customers/${encodeURIComponent(id)}`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Customer not found");
+  return data as { customer: AdminCustomer; orders: AdminOrder[] };
+}
+
+export async function apiSetCustomerStatus(token: string, id: string, active: boolean) {
+  const res = await fetch(`${API_URL}/admin/customers/${encodeURIComponent(id)}/status`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify({ active }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not update customer");
+  return data as { customer: AdminCustomer };
+}
+
+export async function apiGetAdmins(token: string) {
+  const res = await fetch(`${API_URL}/admin/admins`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not load admins");
+  return data as { admins: AdminStaff[] };
+}
+
+export async function apiInviteAdmin(token: string, body: { name: string; email: string }) {
+  const res = await fetch(`${API_URL}/admin/admins/invite`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not invite admin");
+  return data as { admin: AdminStaff; message: string };
+}
