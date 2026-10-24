@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useAdminNav } from "@/context/AdminNavContext";
 import {
   Dashboard,
   Usermanagement,
@@ -72,7 +73,26 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout, can, user, homePath } = useAuth();
+  const { open, setOpen } = useAdminNav();
   const [usersOpen, setUsersOpen] = useState(pathname.startsWith("/users"));
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname, setOpen]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open, setOpen]);
 
   const visibleNav = NAV.map((item) => {
     if (item.children) {
@@ -84,102 +104,132 @@ export default function Sidebar() {
     return item;
   }).filter(Boolean) as NavItem[];
 
+  const closeIfMobile = () => setOpen(false);
+
   return (
-    <aside className="flex w-[240px] shrink-0 flex-col border-r border-neutral-200 bg-white">
-      <div className="px-4 py-5 sm:px-5 sm:py-6">
-        <BrandLogo href={homePath} size="sm" />
-        {user?.role ? (
-          <p className="mt-3 text-xs font-medium text-neutral-500">
-            {roleLabel(user.role)}
-          </p>
-        ) : null}
-      </div>
+    <>
+      <button
+        type="button"
+        aria-label="Close menu"
+        className={`fixed inset-0 z-40 bg-black/40 transition-opacity lg:hidden ${
+          open ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={() => setOpen(false)}
+      />
 
-      <nav className="flex-1 space-y-1 px-3">
-        {visibleNav.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          if (item.children) {
-            const childActive = item.children.some(
-              (c) => pathname === c.href || pathname.startsWith(`${c.href}/`)
-            );
-            return (
-              <div key={item.label}>
-                <button
-                  type="button"
-                  onClick={() => setUsersOpen((v) => !v)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium ${
-                    childActive
-                      ? "bg-[#4B0A6B] text-white"
-                      : "text-[#6C6C6C] hover:bg-neutral-50 hover:text-neutral-800"
-                  }`}
-                >
-                  <span className="shrink-0">{item.icon}</span>
-                  <span className="flex-1 text-left">{item.label}</span>
-                  <svg
-                    viewBox="0 0 24 24"
-                    className={`h-4 w-4 transition ${usersOpen || childActive ? "rotate-180" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[min(240px,88vw)] shrink-0 flex-col border-r border-neutral-200 bg-white transition-transform duration-200 lg:static lg:z-auto lg:w-[240px] lg:translate-x-0 ${
+          open ? "translate-x-0 shadow-xl" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-2 px-4 py-5 sm:px-5 sm:py-6">
+          <div className="min-w-0">
+            <BrandLogo href={homePath} size="sm" />
+            {user?.role ? (
+              <p className="mt-3 text-xs font-medium text-neutral-500">{roleLabel(user.role)}</p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100 lg:hidden"
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+          {visibleNav.map((item) => {
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            if (item.children) {
+              const childActive = item.children.some(
+                (c) => pathname === c.href || pathname.startsWith(`${c.href}/`)
+              );
+              return (
+                <div key={item.label}>
+                  <button
+                    type="button"
+                    onClick={() => setUsersOpen((v) => !v)}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium ${
+                      childActive
+                        ? "bg-[#4B0A6B] text-white"
+                        : "text-[#6C6C6C] hover:bg-neutral-50 hover:text-neutral-800"
+                    }`}
                   >
-                    <path d="M6 9l6 6 6-6" strokeLinecap="round" />
-                  </svg>
-                </button>
-                {(usersOpen || childActive) && (
-                  <div className="ml-6 mt-1 space-y-1 border-l border-neutral-200 pl-3">
-                    {item.children.map((child) => {
-                      const isChild =
-                        pathname === child.href || pathname.startsWith(`${child.href}/`);
-                      return (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          className={`block rounded-lg px-2 py-2 text-sm ${
-                            isChild
-                              ? "border-l-2 border-[#4B0A6B] pl-2 font-semibold text-neutral-900"
-                              : "text-neutral-500 hover:text-neutral-800"
-                          }`}
-                        >
-                          {child.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                    <span className="shrink-0">{item.icon}</span>
+                    <span className="flex-1 text-left">{item.label}</span>
+                    <svg
+                      viewBox="0 0 24 24"
+                      className={`h-4 w-4 transition ${usersOpen || childActive ? "rotate-180" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                    >
+                      <path d="M6 9l6 6 6-6" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                  {(usersOpen || childActive) && (
+                    <div className="ml-6 mt-1 space-y-1 border-l border-neutral-200 pl-3">
+                      {item.children.map((child) => {
+                        const isChild =
+                          pathname === child.href || pathname.startsWith(`${child.href}/`);
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            onClick={closeIfMobile}
+                            className={`block rounded-lg px-2 py-2 text-sm ${
+                              isChild
+                                ? "border-l-2 border-[#4B0A6B] pl-2 font-semibold text-neutral-900"
+                                : "text-neutral-500 hover:text-neutral-800"
+                            }`}
+                          >
+                            {child.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={closeIfMobile}
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium ${
+                  active
+                    ? "bg-[#4B0A6B] text-white"
+                    : "text-[#6C6C6C] hover:bg-neutral-50 hover:text-neutral-900"
+                }`}
+              >
+                <span className="shrink-0">{item.icon}</span>
+                {item.label}
+              </Link>
             );
-          }
+          })}
+        </nav>
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium ${
-                active
-                  ? "bg-[#4B0A6B] text-white"
-                  : "text-[#6C6C6C] hover:bg-neutral-50 hover:text-neutral-900"
-              }`}
-            >
-              <span className="shrink-0">{item.icon}</span>
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="border-t border-neutral-200 p-3">
-        <button
-          type="button"
-          onClick={() => {
-            logout();
-            router.push("/login");
-          }}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#6C6C6C] hover:bg-neutral-50 hover:text-neutral-900"
-        >
-          <LogOutIcon className="h-5 w-5" />
-          Log out
-        </button>
-      </div>
-    </aside>
+        <div className="border-t border-neutral-200 p-3">
+          <button
+            type="button"
+            onClick={() => {
+              logout();
+              setOpen(false);
+              router.push("/login");
+            }}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#6C6C6C] hover:bg-neutral-50 hover:text-neutral-900"
+          >
+            <LogOutIcon className="h-5 w-5" />
+            Log out
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }
