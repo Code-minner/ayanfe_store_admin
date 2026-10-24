@@ -10,8 +10,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Ayanfe Admin",
-  description: "Ayanfe Store admin dashboard",
+  title: "Attog Admin",
+  description: "Attog Store admin dashboard",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

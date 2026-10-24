@@ -15,6 +15,7 @@ import {
 } from "@/components/icons/svg";
 import type { StaffPermission } from "@/lib/roles";
 import { roleLabel } from "@/lib/roles";
+import BrandLogo from "@/components/BrandLogo";
 
 type NavChild = { label: string; href: string; permission: StaffPermission };
 type NavItem = {
@@ -85,15 +86,8 @@ export default function Sidebar() {
 
   return (
     <aside className="flex w-[240px] shrink-0 flex-col border-r border-neutral-200 bg-white">
-      <div className="px-5 py-6">
-        <Link href={homePath} className="inline-flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#4B0A6B] text-sm font-bold text-white">
-            A
-          </span>
-          <span className="text-sm font-bold tracking-wide text-[#4B0A6B]">
-            AYANFE STORE
-          </span>
-        </Link>
+      <div className="px-4 py-5 sm:px-5 sm:py-6">
+        <BrandLogo href={homePath} size="sm" />
         {user?.role ? (
           <p className="mt-3 text-xs font-medium text-neutral-500">
             {roleLabel(user.role)}

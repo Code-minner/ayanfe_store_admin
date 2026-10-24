@@ -8,7 +8,7 @@ import { apiGetSettings, apiUpdateSettings } from "@/lib/api";
 
 export default function SettingsPage() {
   const { token } = useAuth();
-  const [storeName, setStoreName] = useState("Ayanfe Store");
+  const [storeName, setStoreName] = useState("Attog Store");
   const [storeAddress, setStoreAddress] = useState("");
   const [storePhone, setStorePhone] = useState("");
   const [adminNotifyEmail, setAdminNotifyEmail] = useState("");
@@ -22,7 +22,7 @@ export default function SettingsPage() {
     if (!token) return;
     void apiGetSettings(token)
       .then(({ settings }) => {
-        setStoreName(settings.storeName || "Ayanfe Store");
+        setStoreName(settings.storeName || "Attog Store");
         setStoreAddress(settings.storeAddress || "");
         setStorePhone(settings.storePhone || "");
         setAdminNotifyEmail(settings.adminNotifyEmail || "");

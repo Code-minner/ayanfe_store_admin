@@ -138,7 +138,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold text-neutral-900">Hello {name}</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            Live overview of how Ayanfe store is doing
+            Live overview of how Attog Store is doing
           </p>
         </div>
 

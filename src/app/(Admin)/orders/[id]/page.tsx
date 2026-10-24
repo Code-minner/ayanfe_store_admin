@@ -71,7 +71,7 @@ export default function OrderDetailsPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-lg font-semibold">#{order.invoiceNumber || order.id.slice(-7)}</p>
-              <p className="mt-1 text-sm font-medium text-[#4B0A6B]">Ayanfe Store</p>
+              <p className="mt-1 text-sm font-medium text-[#4B0A6B]">Attog Store</p>
             </div>
             <StatusPill status={order.status} />
           </div>
