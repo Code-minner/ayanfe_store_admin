@@ -1,10 +1,14 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
+import ProductThumb from "@/components/admin/ProductThumb";
+import PackVariantsEditor, {
+  draftsToVariants,
+  type PackVariantDraft,
+} from "@/components/admin/PackVariantsEditor";
 import { useAuth } from "@/context/AuthContext";
 import {
   apiCreateProduct,
@@ -31,6 +35,7 @@ export default function NewProductPage() {
   const [slugTouched, setSlugTouched] = useState(false);
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("50");
+  const [variants, setVariants] = useState<PackVariantDraft[]>([]);
   const [categorySlug, setCategorySlug] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -93,6 +98,11 @@ export default function NewProductPage() {
       setError("Enter a valid price");
       return;
     }
+    const packVariants = draftsToVariants(variants);
+    if (variants.length && !packVariants.length) {
+      setError("Fill pack label and price, or remove empty pack rows");
+      return;
+    }
 
     setSaving(true);
     setError("");
@@ -107,6 +117,7 @@ export default function NewProductPage() {
         categorySlug,
         category: categoryName,
         stock: Math.max(0, Number.parseInt(stock || "0", 10) || 0),
+        variants: packVariants,
         subtitle: subtitle.trim() || undefined,
         isFeatured,
         isNewArrival,
@@ -167,7 +178,7 @@ export default function NewProductPage() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="block text-sm font-medium">
-              Price (NGN)
+              Base price (NGN)
               <input
                 type="number"
                 min="0"
@@ -179,7 +190,7 @@ export default function NewProductPage() {
               />
             </label>
             <label className="block text-sm font-medium">
-              Stock
+              Base stock
               <input
                 type="number"
                 min="0"
@@ -190,6 +201,8 @@ export default function NewProductPage() {
               />
             </label>
           </div>
+
+          <PackVariantsEditor variants={variants} onChange={setVariants} />
 
           <label className="block text-sm font-medium">
             Category
@@ -248,9 +261,9 @@ export default function NewProductPage() {
               />
             </div>
             {imageUrl ? (
-              <span className="relative mt-3 block h-28 w-28 overflow-hidden rounded-xl border border-neutral-200 bg-white">
-                <Image src={imageUrl} alt="" fill className="object-contain p-2" sizes="112px" />
-              </span>
+              <div className="mt-3">
+                <ProductThumb src={imageUrl} alt="" size={112} className="rounded-xl" />
+              </div>
             ) : null}
           </div>
 

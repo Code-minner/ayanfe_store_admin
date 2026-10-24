@@ -9,6 +9,13 @@ import { useAuth } from "@/context/AuthContext";
 import { apiGetOrder, apiUpdateOrderStatus, type AdminOrder } from "@/lib/api";
 import { formatDate, formatNaira } from "@/lib/format";
 
+function shippingLabel(method?: string) {
+  if (method === "local_pickup") return "Local pickup";
+  if (method === "waybill") return "Waybill";
+  if (method === "stockpile") return "Stockpile";
+  return method || "—";
+}
+
 export default function OrderDetailsPage() {
   const params = useParams<{ id: string }>();
   const { token } = useAuth();
@@ -47,6 +54,15 @@ export default function OrderDetailsPage() {
     );
   }
 
+  const ship = order.shipping;
+  const customerName =
+    ship?.fullName ||
+    [ship?.firstName, ship?.lastName].filter(Boolean).join(" ").trim() ||
+    "—";
+  const addressLine = [ship?.address, ship?.city, ship?.state, ship?.country]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <>
       <TopBar breadcrumb={<>Orders &gt; <span className="font-semibold text-neutral-900">Order Details</span></>} />
@@ -60,10 +76,50 @@ export default function OrderDetailsPage() {
             <StatusPill status={order.status} />
           </div>
           <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-            <div><p className="text-neutral-500">Order Created at</p><p className="mt-1 font-medium">{formatDate(order.createdAt)}</p></div>
-            <div><p className="text-neutral-500">Name</p><p className="mt-1 font-medium">{order.shipping?.fullName || "—"}</p></div>
-            <div><p className="text-neutral-500">Email</p><p className="mt-1 font-medium">{order.email}</p></div>
-            <div><p className="text-neutral-500">Contact</p><p className="mt-1 font-medium">{order.shipping?.phone || "—"}</p></div>
+            <div>
+              <p className="text-neutral-500">Order created</p>
+              <p className="mt-1 font-medium">{formatDate(order.createdAt)}</p>
+            </div>
+            <div>
+              <p className="text-neutral-500">Name</p>
+              <p className="mt-1 font-medium">{customerName}</p>
+            </div>
+            <div>
+              <p className="text-neutral-500">Email</p>
+              <p className="mt-1 font-medium">{order.email}</p>
+            </div>
+            <div>
+              <p className="text-neutral-500">Phone</p>
+              <p className="mt-1 font-medium">{ship?.phone || "—"}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+          <h2 className="font-semibold">Shipment & delivery</h2>
+          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <p className="text-neutral-500">Method</p>
+              <p className="mt-1 font-medium">{shippingLabel(ship?.method)}</p>
+            </div>
+            <div>
+              <p className="text-neutral-500">Shipping fee</p>
+              <p className="mt-1 font-medium">
+                {ship?.shippingFee && ship.shippingFee > 0
+                  ? formatNaira(ship.shippingFee)
+                  : "Free / included"}
+              </p>
+            </div>
+            <div className="sm:col-span-2">
+              <p className="text-neutral-500">Address</p>
+              <p className="mt-1 font-medium">{addressLine || "—"}</p>
+            </div>
+            {order.customerNote && (
+              <div className="sm:col-span-2">
+                <p className="text-neutral-500">Customer note</p>
+                <p className="mt-1 whitespace-pre-wrap font-medium">{order.customerNote}</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -83,28 +139,75 @@ export default function OrderDetailsPage() {
               </div>
             ))}
           </div>
-          <div className="mt-6 border-t border-neutral-100 pt-4 text-sm">
-            <p className="flex items-center gap-2"><span className="text-neutral-500">Status:</span> <StatusPill status={order.status === "paid" || order.status === "processing" || order.status === "shipped" ? "paid" : order.status} /></p>
-            <p className="mt-2"><span className="text-neutral-500">Payment Method:</span> {order.paymentMethod.replace("_", " ")}</p>
-            <p className="mt-2"><span className="text-neutral-500">Sub Total:</span> {order.items.length} items ({formatNaira(order.total)})</p>
+          <div className="mt-6 space-y-2 border-t border-neutral-100 pt-4 text-sm">
+            <p className="flex items-center gap-2">
+              <span className="text-neutral-500">Status:</span>{" "}
+              <StatusPill
+                status={
+                  order.status === "paid" ||
+                  order.status === "processing" ||
+                  order.status === "shipped"
+                    ? "paid"
+                    : order.status
+                }
+              />
+            </p>
+            <p>
+              <span className="text-neutral-500">Payment method:</span>{" "}
+              {order.paymentMethod.replace(/_/g, " ")}
+            </p>
+            <p>
+              <span className="text-neutral-500">Subtotal:</span> {formatNaira(order.subtotal)}
+            </p>
+            <p>
+              <span className="text-neutral-500">Fees (service + shipping):</span>{" "}
+              {formatNaira(order.fee)}
+            </p>
+            <p className="font-semibold">
+              <span className="text-neutral-500 font-normal">Total:</span> {formatNaira(order.total)}
+            </p>
           </div>
         </div>
 
         <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Approve Payment</h2>
+            <h2 className="font-semibold">Approve payment</h2>
             <div className="relative">
-              <button type="button" className="rounded-lg p-2 hover:bg-neutral-50" onClick={() => setMenuOpen((v) => !v)} disabled={saving}>⋮</button>
+              <button
+                type="button"
+                className="rounded-lg p-2 hover:bg-neutral-50"
+                onClick={() => setMenuOpen((v) => !v)}
+                disabled={saving}
+              >
+                ⋮
+              </button>
               {menuOpen && (
                 <div className="absolute right-0 z-10 mt-1 w-36 rounded-xl border border-neutral-200 bg-white py-2 shadow-lg">
-                  <button type="button" className="block w-full px-4 py-2 text-left hover:bg-neutral-50" onClick={() => void updateStatus("paid")}>Confirm</button>
-                  <button type="button" className="block w-full px-4 py-2 text-left hover:bg-neutral-50" onClick={() => void updateStatus("failed")}>Failed</button>
+                  <button
+                    type="button"
+                    className="block w-full px-4 py-2 text-left hover:bg-neutral-50"
+                    onClick={() => void updateStatus("paid")}
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    className="block w-full px-4 py-2 text-left hover:bg-neutral-50"
+                    onClick={() => void updateStatus("failed")}
+                  >
+                    Failed
+                  </button>
                 </div>
               )}
             </div>
           </div>
           {order.receiptUrl && (
-            <a href={order.receiptUrl} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-medium text-[#4B0A6B] underline">
+            <a
+              href={order.receiptUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-block text-sm font-medium text-[#4B0A6B] underline"
+            >
               View transfer receipt
             </a>
           )}

@@ -2,16 +2,22 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
+import RequirePermission from "@/components/admin/RequirePermission";
 import SearchInput from "@/components/ui/SearchInput";
 import StatusPill from "@/components/ui/StatusPill";
 import Modal from "@/components/ui/Modal";
 import { useAuth } from "@/context/AuthContext";
-import { apiGetAdmins, apiInviteAdmin, type AdminStaff } from "@/lib/api";
+import {
+  apiGetAdmins,
+  apiInviteAdmin,
+  type AdminStaff,
+  type InviteStaffRole,
+} from "@/lib/api";
 import { MOCK_ROLES, PERMISSIONS } from "@/lib/mock";
 import { formatDate } from "@/lib/format";
 
 export default function AdminsPage() {
-  const { token } = useAuth();
+  const { token, role, can } = useAuth();
   const [tab, setTab] = useState<"admins" | "roles">("admins");
   const [q, setQ] = useState("");
   const [admins, setAdmins] = useState<AdminStaff[]>([]);
@@ -22,6 +28,7 @@ export default function AdminsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<InviteStaffRole>("support");
   const [inviting, setInviting] = useState(false);
   const [viewAdmin, setViewAdmin] = useState<AdminStaff | null>(null);
   const [roleModal, setRoleModal] = useState<"add" | "edit" | null>(null);
@@ -78,11 +85,13 @@ export default function AdminsPage() {
       const data = await apiInviteAdmin(token, {
         name: inviteName.trim(),
         email: inviteEmail.trim(),
+        role: inviteRole,
       });
       setAdmins((prev) => [data.admin, ...prev]);
       setMessage(data.message || "Invite sent.");
       setInviteName("");
       setInviteEmail("");
+      setInviteRole("support");
       setAddOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not invite admin");
@@ -91,12 +100,20 @@ export default function AdminsPage() {
     }
   };
 
+  const inviteOptions: { value: InviteStaffRole; label: string }[] = [
+    { value: "support", label: "Customer Care" },
+    { value: "admin", label: "Admin" },
+    ...(role === "super_admin"
+      ? [{ value: "super_admin" as const, label: "Super Admin" }]
+      : []),
+  ];
+
   return (
-    <>
+    <RequirePermission permission="admins">
       <TopBar
         breadcrumb={
           <>
-            User Management &gt; <span className="font-semibold text-neutral-900">Admins</span>
+            User Management &gt; <span className="font-semibold text-neutral-900">Staff</span>
           </>
         }
       />
@@ -112,20 +129,22 @@ export default function AdminsPage() {
                   tab === t ? "border-b-2 border-[#4B0A6B] text-neutral-900" : "text-neutral-500"
                 }`}
               >
-                {t}
+                {t === "admins" ? "staff" : t}
               </button>
             ))}
           </div>
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
             <SearchInput value={q} onChange={setQ} />
-            <button
-              type="button"
-              onClick={() => (tab === "admins" ? setAddOpen(true) : setRoleModal("add"))}
-              className="rounded-xl bg-[#4B0A6B] px-4 py-2.5 text-sm font-semibold text-white"
-            >
-              {tab === "admins" ? "+ Invite admin" : "+ Add role"}
-            </button>
+            {can("invite_staff") ? (
+              <button
+                type="button"
+                onClick={() => (tab === "admins" ? setAddOpen(true) : setRoleModal("add"))}
+                className="rounded-xl bg-[#4B0A6B] px-4 py-2.5 text-sm font-semibold text-white"
+              >
+                {tab === "admins" ? "+ Invite staff" : "+ Add role"}
+              </button>
+            ) : null}
           </div>
 
           {message ? <p className="mt-3 text-sm text-emerald-700">{message}</p> : null}
@@ -243,7 +262,7 @@ export default function AdminsPage() {
         </div>
       </main>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Invite new admin">
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Invite staff">
         <form className="space-y-4" onSubmit={(e) => void onInvite(e)}>
           <p className="text-sm text-neutral-600">
             We will email them a temporary password so they can sign in to the admin app.
@@ -265,9 +284,23 @@ export default function AdminsPage() {
               type="email"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="admin@example.com"
+              placeholder="staff@example.com"
               className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
             />
+          </label>
+          <label className="block text-sm font-medium">
+            Role
+            <select
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value as InviteStaffRole)}
+              className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
+            >
+              {inviteOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </label>
           <div className="flex justify-end gap-3 pt-2">
             <button
@@ -372,6 +405,6 @@ export default function AdminsPage() {
           </div>
         </form>
       </Modal>
-    </>
+    </RequirePermission>
   );
 }

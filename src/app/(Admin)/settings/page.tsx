@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
+import RequirePermission from "@/components/admin/RequirePermission";
 import { useAuth } from "@/context/AuthContext";
 import { apiGetSettings, apiUpdateSettings } from "@/lib/api";
 
@@ -54,7 +55,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <>
+    <RequirePermission permission="settings">
       <TopBar breadcrumb={<span className="font-semibold text-neutral-900">Settings</span>} />
       <main className="flex-1 p-6">
         <h1 className="text-2xl font-semibold">Settings</h1>
@@ -83,6 +84,6 @@ export default function SettingsPage() {
           </button>
         </form>
       </main>
-    </>
+    </RequirePermission>
   );
 }

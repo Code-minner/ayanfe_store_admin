@@ -18,6 +18,7 @@ import { formatDate } from "@/lib/format";
 export default function CustomersPage() {
   const { token } = useAuth();
   const [q, setQ] = useState("");
+  const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
   const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -30,7 +31,7 @@ export default function CustomersPage() {
     setLoading(true);
     setError("");
     try {
-      const data = await apiGetCustomers(token, q);
+      const data = await apiGetCustomers(token, { q, status });
       setCustomers(data.customers || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load customers");
@@ -46,7 +47,7 @@ export default function CustomersPage() {
     }, q ? 250 : 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, q]);
+  }, [token, q, status]);
 
   const rows = useMemo(() => customers, [customers]);
 
@@ -80,6 +81,28 @@ export default function CustomersPage() {
         <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <SearchInput value={q} onChange={setQ} />
+            <div className="inline-flex rounded-xl border border-neutral-200 bg-neutral-50 p-1">
+              {(
+                [
+                  ["all", "All"],
+                  ["active", "Active"],
+                  ["inactive", "Suspended"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStatus(key)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    status === key
+                      ? "bg-white text-[#4B0A6B] shadow-sm"
+                      : "text-neutral-500 hover:text-neutral-800"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
           <div className="mt-5 overflow-x-auto">

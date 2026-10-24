@@ -6,18 +6,18 @@ import Sidebar from "@/components/admin/Sidebar";
 import { useAuth } from "@/context/AuthContext";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { hydrated, isAdmin } = useAuth();
+  const { hydrated, isStaff } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!isAdmin) router.replace("/login");
-  }, [hydrated, isAdmin, router]);
+    if (!isStaff) router.replace("/login");
+  }, [hydrated, isStaff, router]);
 
-  if (!hydrated || !isAdmin) {
+  if (!hydrated || !isStaff) {
     return (
       <div className="grid min-h-screen place-items-center bg-[#F5F5F7] text-sm text-neutral-500">
-        Checking admin session...
+        Checking staff session...
       </div>
     );
   }

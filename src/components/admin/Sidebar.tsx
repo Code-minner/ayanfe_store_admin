@@ -13,12 +13,16 @@ import {
   Setting,
   LogOutIcon,
 } from "@/components/icons/svg";
+import type { StaffPermission } from "@/lib/roles";
+import { roleLabel } from "@/lib/roles";
 
+type NavChild = { label: string; href: string; permission: StaffPermission };
 type NavItem = {
   label: string;
   href: string;
   icon: ReactNode;
-  children?: { label: string; href: string }[];
+  permission?: StaffPermission;
+  children?: NavChild[];
 };
 
 const NAV: NavItem[] = [
@@ -26,48 +30,63 @@ const NAV: NavItem[] = [
     label: "Dashboard",
     href: "/dashboard",
     icon: <Dashboard className="h-5 w-5" />,
+    permission: "dashboard",
   },
   {
     label: "User Management",
     href: "/users",
     icon: <Usermanagement className="h-5 w-5" />,
     children: [
-      { label: "Customers", href: "/users/customers" },
-      { label: "Admins", href: "/users/admins" },
+      { label: "Customers", href: "/users/customers", permission: "customers" },
+      { label: "Admins", href: "/users/admins", permission: "admins" },
     ],
   },
   {
     label: "Products",
     href: "/products",
     icon: <Product className="h-5 w-5" />,
+    permission: "products",
   },
   {
     label: "Orders",
     href: "/orders",
     icon: <Orders className="h-5 w-5" />,
+    permission: "orders",
   },
   {
     label: "Payments",
     href: "/payments",
     icon: <Payment className="h-5 w-5" />,
+    permission: "payments",
   },
   {
     label: "Settings",
     href: "/settings",
     icon: <Setting className="h-5 w-5" />,
+    permission: "settings",
   },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, can, user, homePath } = useAuth();
   const [usersOpen, setUsersOpen] = useState(pathname.startsWith("/users"));
+
+  const visibleNav = NAV.map((item) => {
+    if (item.children) {
+      const children = item.children.filter((c) => can(c.permission));
+      if (children.length === 0) return null;
+      return { ...item, children };
+    }
+    if (item.permission && !can(item.permission)) return null;
+    return item;
+  }).filter(Boolean) as NavItem[];
 
   return (
     <aside className="flex w-[240px] shrink-0 flex-col border-r border-neutral-200 bg-white">
       <div className="px-5 py-6">
-        <Link href="/dashboard" className="inline-flex items-center gap-2">
+        <Link href={homePath} className="inline-flex items-center gap-2">
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#4B0A6B] text-sm font-bold text-white">
             A
           </span>
@@ -75,10 +94,15 @@ export default function Sidebar() {
             AYANFE STORE
           </span>
         </Link>
+        {user?.role ? (
+          <p className="mt-3 text-xs font-medium text-neutral-500">
+            {roleLabel(user.role)}
+          </p>
+        ) : null}
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
-        {NAV.map((item) => {
+        {visibleNav.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           if (item.children) {
             const childActive = item.children.some(

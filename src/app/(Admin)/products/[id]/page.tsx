@@ -1,10 +1,15 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import TopBar from "@/components/admin/TopBar";
+import ProductThumb from "@/components/admin/ProductThumb";
+import PackVariantsEditor, {
+  draftsToVariants,
+  variantsToDrafts,
+  type PackVariantDraft,
+} from "@/components/admin/PackVariantsEditor";
 import { useAuth } from "@/context/AuthContext";
 import {
   apiGetCategories,
@@ -33,6 +38,7 @@ export default function ProductEditPage() {
   const [slug, setSlug] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("0");
+  const [variants, setVariants] = useState<PackVariantDraft[]>([]);
   const [categorySlug, setCategorySlug] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -66,6 +72,7 @@ export default function ProductEditPage() {
         setSlug(p.slug);
         setPrice(String(p.price ?? ""));
         setStock(String(p.stock ?? 0));
+        setVariants(variantsToDrafts(p.variants));
         setCategorySlug(p.categorySlug);
         setDescription(p.description || "");
         setImageUrl(p.image);
@@ -124,6 +131,12 @@ export default function ProductEditPage() {
       return;
     }
 
+    const packVariants = draftsToVariants(variants);
+    if (variants.length && !packVariants.length) {
+      setError("Fill pack label and price, or remove empty pack rows");
+      return;
+    }
+
     setSaving(true);
     setError("");
     setSaved(false);
@@ -139,6 +152,7 @@ export default function ProductEditPage() {
         categorySlug,
         category: categoryName,
         stock: Math.max(0, Number.parseInt(stock || "0", 10) || 0),
+        variants: packVariants,
         subtitle: subtitle.trim() || null,
         badge: badge.trim() || null,
         isFeatured,
@@ -146,6 +160,9 @@ export default function ProductEditPage() {
         active,
       });
       setProduct(updated);
+      setVariants(variantsToDrafts(updated.variants));
+      setPrice(String(updated.price ?? parsedPrice));
+      setStock(String(updated.stock ?? 0));
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2000);
     } catch (err) {
@@ -244,7 +261,7 @@ export default function ProductEditPage() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="block text-sm font-medium">
-              Price (NGN)
+              Base price (NGN)
               <input
                 type="number"
                 min="0"
@@ -254,9 +271,12 @@ export default function ProductEditPage() {
                 required
                 className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
               />
+              <span className="mt-1 block text-xs text-neutral-500">
+                Used when there are no packs. With packs, price becomes the lowest pack price.
+              </span>
             </label>
             <label className="block text-sm font-medium">
-              Stock
+              Base stock
               <input
                 type="number"
                 min="0"
@@ -267,6 +287,8 @@ export default function ProductEditPage() {
               />
             </label>
           </div>
+
+          <PackVariantsEditor variants={variants} onChange={setVariants} />
 
           <label className="block text-sm font-medium">
             Category
@@ -336,9 +358,9 @@ export default function ProductEditPage() {
               />
             </div>
             {imageUrl ? (
-              <span className="relative mt-3 block h-28 w-28 overflow-hidden rounded-xl border border-neutral-200 bg-white">
-                <Image src={imageUrl} alt="" fill className="object-contain p-2" sizes="112px" />
-              </span>
+              <div className="mt-3">
+                <ProductThumb src={imageUrl} alt="" size={112} className="rounded-xl" />
+              </div>
             ) : null}
           </div>
 
@@ -351,12 +373,12 @@ export default function ProductEditPage() {
                     <button
                       type="button"
                       onClick={() => setImageUrl(src)}
-                      className={`relative block h-20 w-20 overflow-hidden rounded-xl border bg-white ${
+                      className={`block overflow-hidden rounded-xl border bg-white ${
                         src === imageUrl ? "border-[#4B0A6B]" : "border-neutral-200"
                       }`}
                       title="Set as main image"
                     >
-                      <Image src={src} alt="" fill className="object-contain p-2" sizes="80px" />
+                      <ProductThumb src={src} alt="" size={80} />
                     </button>
                     <button
                       type="button"

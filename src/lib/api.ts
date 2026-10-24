@@ -76,7 +76,7 @@ export async function apiUpdateOrderStatus(token: string, id: string, status: st
 
 export async function apiGetProducts(
   token?: string | null,
-  opts?: { page?: number; limit?: number; q?: string }
+  opts?: { page?: number; limit?: number; q?: string; status?: "all" | "active" | "inactive" }
 ) {
   const qs = new URLSearchParams({
     admin: "true",
@@ -85,6 +85,7 @@ export async function apiGetProducts(
     limit: String(opts?.limit ?? 20),
   });
   if (opts?.q?.trim()) qs.set("q", opts.q.trim());
+  if (opts?.status && opts.status !== "all") qs.set("status", opts.status);
 
   const res = await fetch(`${API_URL}/products?${qs}`, {
     headers: authHeaders(token),
@@ -136,6 +137,7 @@ export async function apiCreateProduct(
     isNewArrival?: boolean;
     active?: boolean;
     colors?: string[];
+    variants?: AdminProductVariant[];
     subtitle?: string;
   }
 ) {
@@ -176,6 +178,7 @@ export type ProductWriteBody = {
   isNewArrival?: boolean;
   active?: boolean;
   colors?: string[];
+  variants?: AdminProductVariant[];
   subtitle?: string | null;
   badge?: string | null;
 };
@@ -232,13 +235,29 @@ export type AdminOrder = {
   paymentMethod: string;
   status: string;
   receiptUrl?: string | null;
+  customerNote?: string | null;
   shipping?: {
+    method?: string;
     fullName?: string;
+    firstName?: string;
+    lastName?: string;
     phone?: string;
+    email?: string;
     address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    shippingFee?: number;
   } | null;
   invoiceNumber?: string | null;
   createdAt: string;
+};
+
+export type AdminProductVariant = {
+  id: string;
+  label: string;
+  price: number;
+  stock: number;
 };
 
 export type AdminProduct = {
@@ -258,6 +277,7 @@ export type AdminProduct = {
   subtitle?: string | null;
   badge?: string | null;
   colors?: string[];
+  variants?: AdminProductVariant[] | null;
   createdAt?: string;
 };
 
@@ -288,15 +308,24 @@ export type AdminStaff = {
   name: string;
   email: string;
   role: string;
+  roleKey?: string;
   dateAdded: string;
   lastActive: string;
   status: "Active" | "Inactive";
   active: boolean;
 };
 
-export async function apiGetCustomers(token: string, q?: string) {
-  const qs = q?.trim() ? `?q=${encodeURIComponent(q.trim())}` : "";
-  const res = await fetch(`${API_URL}/admin/customers${qs}`, {
+export type InviteStaffRole = "support" | "admin" | "super_admin";
+
+export async function apiGetCustomers(
+  token: string,
+  opts?: { q?: string; status?: "all" | "active" | "inactive" }
+) {
+  const qs = new URLSearchParams();
+  if (opts?.q?.trim()) qs.set("q", opts.q.trim());
+  if (opts?.status && opts.status !== "all") qs.set("status", opts.status);
+  const suffix = qs.toString() ? `?${qs}` : "";
+  const res = await fetch(`${API_URL}/admin/customers${suffix}`, {
     headers: authHeaders(token),
     cache: "no-store",
   });
@@ -326,6 +355,45 @@ export async function apiSetCustomerStatus(token: string, id: string, active: bo
   return data as { customer: AdminCustomer };
 }
 
+export type AdminStats = {
+  customers: number;
+  customersChangePct: number | null;
+  staff: number;
+  activeProducts: number;
+  totalProducts: number;
+  inactiveProducts: number;
+  ordersTotal: number;
+  ordersChangePct: number | null;
+  ordersPending: number;
+  ordersCompleted: number;
+  ordersCanceled: number;
+  revenueConfirmed: number;
+  revenueConfirmedChangePct: number | null;
+  revenueInflow: number;
+  revenueInflowChangePct: number | null;
+  revenuePending: number;
+  revenuePendingChangePct: number | null;
+  paidCount: number;
+  pendingPayCount: number;
+  byStatus: Record<string, { count: number; total: number }>;
+  byMethod: Record<string, { count: number; total: number }>;
+  customersChart: number[];
+  chartYear: number;
+  chartYears?: number[];
+  customersInChartYear?: number;
+};
+
+export async function apiGetStats(token: string, opts?: { year?: number }) {
+  const qs = opts?.year ? `?year=${encodeURIComponent(String(opts.year))}` : "";
+  const res = await fetch(`${API_URL}/admin/stats${qs}`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not load stats");
+  return data as { stats: AdminStats };
+}
+
 export async function apiGetAdmins(token: string) {
   const res = await fetch(`${API_URL}/admin/admins`, {
     headers: authHeaders(token),
@@ -336,13 +404,16 @@ export async function apiGetAdmins(token: string) {
   return data as { admins: AdminStaff[] };
 }
 
-export async function apiInviteAdmin(token: string, body: { name: string; email: string }) {
+export async function apiInviteAdmin(
+  token: string,
+  body: { name: string; email: string; role?: InviteStaffRole }
+) {
   const res = await fetch(`${API_URL}/admin/admins/invite`, {
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify(body),
   });
   const data = await parseJson(res);
-  if (!res.ok) throw new Error(data.message || "Could not invite admin");
+  if (!res.ok) throw new Error(data.message || "Could not invite staff");
   return data as { admin: AdminStaff; message: string };
 }

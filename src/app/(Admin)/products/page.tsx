@@ -1,9 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import TopBar from "@/components/admin/TopBar";
+import RequirePermission from "@/components/admin/RequirePermission";
+import ProductThumb from "@/components/admin/ProductThumb";
 import SearchInput from "@/components/ui/SearchInput";
 import { useAuth } from "@/context/AuthContext";
 import { apiGetProducts, type AdminProduct } from "@/lib/api";
@@ -11,16 +12,11 @@ import { formatDate, formatNaira } from "@/lib/format";
 
 const PAGE_SIZE = 20;
 
-function thumb(url: string) {
-  if (!url?.includes("res.cloudinary.com") || !url.includes("/upload/")) return url;
-  if (/\/upload\/(?:[^/]+,)*?(?:w_|f_auto)/.test(url)) return url;
-  return url.replace("/upload/", "/upload/f_auto,q_auto,c_limit,w_96/");
-}
-
 export default function ProductsPage() {
   const { token } = useAuth();
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
+  const [status, setStatus] = useState<"active" | "inactive" | "all">("active");
   const [page, setPage] = useState(1);
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [total, setTotal] = useState(0);
@@ -36,7 +32,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedQ]);
+  }, [debouncedQ, status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +44,7 @@ export default function ProductsPage() {
           page,
           limit: PAGE_SIZE,
           q: debouncedQ || undefined,
+          status,
         });
         if (cancelled) return;
         setProducts(data.products || []);
@@ -64,7 +61,7 @@ export default function ProductsPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, page, debouncedQ]);
+  }, [token, page, debouncedQ, status]);
 
   const pageNumbers = useMemo(() => {
     const maxButtons = 5;
@@ -82,14 +79,16 @@ export default function ProductsPage() {
   };
 
   return (
-    <>
+    <RequirePermission permission="products">
       <TopBar breadcrumb={<span className="font-semibold text-neutral-900">Products</span>} />
       <main className="flex-1 p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Products</h1>
             <p className="mt-1 text-sm text-neutral-500">
-              {loading ? "Loading…" : `${total} products · page ${page} of ${totalPages}`}
+              {loading
+                ? "Loading…"
+                : `${total} ${status === "all" ? "" : status + " "}product${total === 1 ? "" : "s"} · page ${page} of ${totalPages}`}
             </p>
           </div>
           <Link
@@ -103,6 +102,28 @@ export default function ProductsPage() {
         <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
           <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
             <SearchInput value={q} onChange={setQ} placeholder="Search name, slug, category…" />
+            <div className="inline-flex rounded-xl border border-neutral-200 bg-neutral-50 p-1">
+              {(
+                [
+                  ["active", "Active"],
+                  ["inactive", "Inactive"],
+                  ["all", "All"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStatus(key)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    status === key
+                      ? "bg-white text-[#4B0A6B] shadow-sm"
+                      : "text-neutral-500 hover:text-neutral-800"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
           {loading && products.length === 0 ? (
@@ -133,15 +154,7 @@ export default function ProductsPage() {
                       <tr key={p.id} className="border-b border-neutral-100 last:border-0">
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-3">
-                            <span className="relative h-10 w-10 overflow-hidden rounded-lg border border-neutral-200 bg-white">
-                              <Image
-                                src={thumb(p.image)}
-                                alt=""
-                                fill
-                                className="object-contain p-1"
-                                sizes="40px"
-                              />
-                            </span>
+                            <ProductThumb src={p.image} alt={p.name} size={40} />
                             <div>
                               <p className="font-medium">{p.name}</p>
                               <p className="text-xs text-neutral-500">{p.slug}</p>
@@ -149,7 +162,11 @@ export default function ProductsPage() {
                           </div>
                         </td>
                         <td className="px-3 py-3 text-neutral-600">{p.category || p.categorySlug}</td>
-                        <td className="px-3 py-3 text-neutral-600">{formatNaira(p.price)}</td>
+                        <td className="px-3 py-3 text-neutral-600">
+                          {p.price > 0 ? formatNaira(p.price) : (
+                            <span className="text-amber-700">No price</span>
+                          )}
+                        </td>
                         <td className="px-3 py-3 text-neutral-600">{p.stock ?? "—"}</td>
                         <td className="px-3 py-3">
                           <span
@@ -226,6 +243,6 @@ export default function ProductsPage() {
           )}
         </div>
       </main>
-    </>
+    </RequirePermission>
   );
 }

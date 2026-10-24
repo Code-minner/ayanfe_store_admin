@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 export default function AdminLoginPage() {
-  const { login, isAdmin, hydrated } = useAuth();
+  const { login, isStaff, hydrated, homePath } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,16 +14,16 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (hydrated && isAdmin) router.replace("/dashboard");
-  }, [hydrated, isAdmin, router]);
+    if (hydrated && isStaff) router.replace(homePath);
+  }, [hydrated, isStaff, homePath, router]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await login(email.trim(), password);
-      router.push("/dashboard");
+      const next = await login(email.trim(), password);
+      router.push(next);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Login failed";
       setError(

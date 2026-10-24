@@ -7,7 +7,7 @@ import TopBar from "@/components/admin/TopBar";
 import SearchInput from "@/components/ui/SearchInput";
 import StatusPill from "@/components/ui/StatusPill";
 import { useAuth } from "@/context/AuthContext";
-import { apiGetOrders, type AdminOrder } from "@/lib/api";
+import { apiGetOrders, apiGetStats, type AdminOrder, type AdminStats } from "@/lib/api";
 import { formatDate, formatNaira } from "@/lib/format";
 
 const TABS = [
@@ -18,10 +18,12 @@ const TABS = [
 ];
 
 export default function OrdersPage() {
-  const { token } = useAuth();
+  const { token, can } = useAuth();
+  const canLoadStats = can("dashboard");
   const [tab, setTab] = useState("all");
   const [q, setQ] = useState("");
   const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [summary, setSummary] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -30,8 +32,12 @@ export default function OrdersPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const data = await apiGetOrders(token, tab === "all" ? undefined : tab);
+        const [data, statsRes] = await Promise.all([
+          apiGetOrders(token, tab === "all" ? undefined : tab),
+          canLoadStats ? apiGetStats(token).catch(() => null) : Promise.resolve(null),
+        ]);
         setOrders(data.orders || []);
+        if (statsRes) setSummary(statsRes.stats);
         setError("");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not load orders");
@@ -40,7 +46,7 @@ export default function OrdersPage() {
       }
     };
     void load();
-  }, [token, tab]);
+  }, [token, tab, canLoadStats]);
 
   const rows = useMemo(
     () =>
@@ -54,10 +60,16 @@ export default function OrdersPage() {
   );
 
   const stats = {
-    all: orders.length,
-    pending: orders.filter((o) => o.status.includes("pending")).length,
-    completed: orders.filter((o) => ["paid", "processing", "shipped"].includes(o.status)).length,
-    canceled: orders.filter((o) => ["cancelled", "failed"].includes(o.status)).length,
+    all: summary?.ordersTotal ?? orders.length,
+    pending:
+      summary?.ordersPending ??
+      orders.filter((o) => o.status.includes("pending")).length,
+    completed:
+      summary?.ordersCompleted ??
+      orders.filter((o) => ["paid", "processing", "shipped"].includes(o.status)).length,
+    canceled:
+      summary?.ordersCanceled ??
+      orders.filter((o) => ["cancelled", "failed"].includes(o.status)).length,
   };
 
   return (
@@ -67,17 +79,15 @@ export default function OrdersPage() {
         <h1 className="text-2xl font-semibold">Orders</h1>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            ["All orders", stats.all, true],
-            ["Pending Order", stats.pending, true],
-            ["Completed Orders", stats.completed, true],
-            ["Canceled Orders", stats.canceled, false],
-          ].map(([label, value, up]) => (
+            ["All orders", stats.all],
+            ["Pending orders", stats.pending],
+            ["Completed orders", stats.completed],
+            ["Canceled / failed", stats.canceled],
+          ].map(([label, value]) => (
             <div key={String(label)} className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
               <p className="text-sm text-neutral-500">{label}</p>
               <p className="mt-2 text-2xl font-semibold">{value as number}</p>
-              <p className={`mt-2 text-xs font-medium ${up ? "text-emerald-600" : "text-red-500"}`}>
-                {up ? "↑ 40% than last month" : "↓ 1% than last month"}
-              </p>
+              <p className="mt-2 text-xs font-medium text-neutral-500">From live orders</p>
             </div>
           ))}
         </div>

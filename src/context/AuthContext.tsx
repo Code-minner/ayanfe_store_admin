@@ -9,13 +9,24 @@ import {
   type ReactNode,
 } from "react";
 import { apiLogin, apiMe, type AdminUser } from "@/lib/api";
+import {
+  can,
+  homePathForRole,
+  isStaffRole,
+  type StaffPermission,
+  type StaffRole,
+} from "@/lib/roles";
 
 type AuthContextValue = {
   user: AdminUser | null;
   token: string | null;
   hydrated: boolean;
-  isAdmin: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  /** Any back-office role (support, admin, super_admin). */
+  isStaff: boolean;
+  role: StaffRole | null;
+  can: (permission: StaffPermission) => boolean;
+  homePath: string;
+  login: (email: string, password: string) => Promise<string>;
   logout: () => void;
 };
 
@@ -38,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setToken(t);
           try {
             const { user: me } = await apiMe(t);
-            if (me.role !== "admin") throw new Error("Not an admin");
+            if (!isStaffRole(me.role)) throw new Error("Not staff");
             setUser(me);
           } catch {
             localStorage.removeItem(TOKEN_KEY);
@@ -63,27 +74,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else localStorage.removeItem(USER_KEY);
   }, [token, user, hydrated]);
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
+  const value = useMemo<AuthContextValue>(() => {
+    const role = isStaffRole(user?.role) ? user!.role : null;
+    return {
       user,
       token,
       hydrated,
-      isAdmin: Boolean(user && token && user.role === "admin"),
+      isStaff: Boolean(user && token && role),
+      role,
+      can: (permission) => can(role, permission),
+      homePath: homePathForRole(role),
       login: async (email, password) => {
         const data = await apiLogin(email, password);
-        if (data.user.role !== "admin") {
-          throw new Error("This account is not an admin");
+        if (!isStaffRole(data.user.role)) {
+          throw new Error("This account cannot access the admin panel");
         }
         setToken(data.token);
         setUser(data.user);
+        return homePathForRole(data.user.role);
       },
       logout: () => {
         setToken(null);
         setUser(null);
       },
-    }),
-    [user, token, hydrated]
-  );
+    };
+  }, [user, token, hydrated]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
