@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
+import AdminMain from "@/components/admin/AdminMain";
 import StatusPill from "@/components/ui/StatusPill";
 import { useAuth } from "@/context/AuthContext";
 import { apiGetCustomer, type AdminCustomer, type AdminOrder } from "@/lib/api";
@@ -45,7 +46,7 @@ export default function CustomerProfilePage() {
           </>
         }
       />
-      <main className="flex-1 space-y-6 p-6">
+      <AdminMain className="space-y-6">
         {loading ? (
           <p className="text-sm text-neutral-500">Loading…</p>
         ) : error ? (
@@ -144,7 +145,7 @@ export default function CustomerProfilePage() {
             </div>
           </>
         ) : null}
-      </main>
+      </AdminMain>
     </>
   );
 }

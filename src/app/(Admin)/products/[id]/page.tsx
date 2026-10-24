@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import TopBar from "@/components/admin/TopBar";
+import AdminMain from "@/components/admin/AdminMain";
 import ProductThumb from "@/components/admin/ProductThumb";
 import PackVariantsEditor, {
   draftsToVariants,
@@ -183,7 +184,7 @@ export default function ProductEditPage() {
             </>
           }
         />
-        <main className="p-6 text-sm text-neutral-500">Loading product...</main>
+        <AdminMain className="text-sm text-neutral-500">Loading product...</AdminMain>
       </>
     );
   }
@@ -199,7 +200,7 @@ export default function ProductEditPage() {
             </>
           }
         />
-        <main className="p-6 text-sm text-red-600">{error || "Product not found"}</main>
+        <AdminMain className="text-sm text-red-600">{error || "Product not found"}</AdminMain>
       </>
     );
   }
@@ -214,7 +215,7 @@ export default function ProductEditPage() {
           </>
         }
       />
-      <main className="flex-1 p-6">
+      <AdminMain>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Edit product</h1>
@@ -427,7 +428,7 @@ export default function ProductEditPage() {
             </button>
           </div>
         </form>
-      </main>
+      </AdminMain>
     </>
   );
 }

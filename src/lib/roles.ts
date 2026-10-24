@@ -28,6 +28,7 @@ export type StaffPermission =
   | "orders"
   | "payments"
   | "payment_totals"
+  | "payment_settings"
   | "settings"
   | "invite_staff";
 
@@ -52,6 +53,7 @@ const PERMS: Record<StaffRole, StaffPermission[]> = {
     "orders",
     "payments",
     "payment_totals",
+    "payment_settings",
     "settings",
     "invite_staff",
   ],

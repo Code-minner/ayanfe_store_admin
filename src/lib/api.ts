@@ -42,6 +42,35 @@ export async function apiMe(token: string) {
   return data as { user: AdminUser };
 }
 
+export async function apiUpdateProfile(
+  token: string,
+  body: { firstName?: string; lastName?: string; email?: string; phone?: string }
+) {
+  const res = await fetch(`${API_URL}/auth/me`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not update profile");
+  return data as { user: AdminUser };
+}
+
+export async function apiUploadAvatar(token: string, file: File) {
+  const form = new FormData();
+  form.append("avatar", file);
+  const headers: HeadersInit = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${API_URL}/auth/me/avatar`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not upload avatar");
+  return data as { user: AdminUser };
+}
+
 export async function apiGetOrders(token: string, status?: string) {
   const q = status && status !== "all" ? `?status=${encodeURIComponent(status)}` : "";
   const res = await fetch(`${API_URL}/orders${q}`, {
@@ -192,6 +221,16 @@ export async function apiUpdateProduct(token: string, id: string, body: ProductW
   const data = await parseJson(res);
   if (!res.ok) throw new Error(data.message || "Could not update product");
   return data as { product: AdminProduct };
+}
+
+export async function apiDeleteProduct(token: string, id: string) {
+  const res = await fetch(`${API_URL}/products/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not delete product");
+  return data as { ok: boolean; id: string };
 }
 
 export async function apiGetSettings(token: string) {

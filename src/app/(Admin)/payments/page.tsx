@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
+import AdminMain from "@/components/admin/AdminMain";
 import RequirePermission from "@/components/admin/RequirePermission";
 import SearchInput from "@/components/ui/SearchInput";
 import StatusPill from "@/components/ui/StatusPill";
@@ -154,7 +155,7 @@ export default function PaymentsPage() {
   return (
     <RequirePermission permission="payments">
       <TopBar breadcrumb={<span className="font-semibold text-neutral-900">Payments</span>} />
-      <main className="flex-1 space-y-6 p-6">
+      <AdminMain className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">Payments</h1>
           <button
@@ -364,7 +365,7 @@ export default function PaymentsPage() {
             )}
           </div>
         </div>
-      </main>
+      </AdminMain>
 
       <Modal open={Boolean(detail)} onClose={() => setDetail(null)} title="Payment details" wide>
         {detail && (

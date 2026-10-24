@@ -1,9 +1,10 @@
-ï»¿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
+import AdminMain from "@/components/admin/AdminMain";
 import SearchInput from "@/components/ui/SearchInput";
 import StatusPill from "@/components/ui/StatusPill";
 import Modal from "@/components/ui/Modal";
@@ -77,7 +78,7 @@ export default function CustomersPage() {
           </>
         }
       />
-      <main className="flex-1 p-6">
+      <AdminMain>
         <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <SearchInput value={q} onChange={setQ} />
@@ -121,7 +122,7 @@ export default function CustomersPage() {
                 {loading ? (
                   <tr>
                     <td colSpan={6} className="px-3 py-10 text-center text-neutral-500">
-                      Loading customersâ€¦
+                      Loading customers…
                     </td>
                   </tr>
                 ) : rows.length === 0 ? (
@@ -149,7 +150,7 @@ export default function CustomersPage() {
                         </div>
                       </td>
                       <td className="px-3 py-3 text-neutral-600">{formatDate(c.registeredAt)}</td>
-                      <td className="px-3 py-3 text-neutral-600">{c.phone || "â€”"}</td>
+                      <td className="px-3 py-3 text-neutral-600">{c.phone || "—"}</td>
                       <td className="px-3 py-3 text-neutral-600">{c.orders}</td>
                       <td className="px-3 py-3">
                         <StatusPill status={c.status} />
@@ -160,7 +161,7 @@ export default function CustomersPage() {
                           className="rounded-lg p-2 hover:bg-neutral-50"
                           onClick={() => setMenuFor(menuFor === c.id ? null : c.id)}
                         >
-                          â‹®
+                          ?
                         </button>
                         {menuFor === c.id && (
                           <div className="absolute right-3 z-10 mt-1 w-44 rounded-xl border border-neutral-200 bg-white py-2 text-left shadow-lg">
@@ -191,7 +192,7 @@ export default function CustomersPage() {
             </table>
           </div>
         </div>
-      </main>
+      </AdminMain>
       <Modal
         open={Boolean(suspendTarget)}
         onClose={() => setSuspendTarget(null)}
@@ -230,7 +231,7 @@ export default function CustomersPage() {
             onClick={() => void confirmSuspend()}
             className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {busy ? "Savingâ€¦" : suspendTarget?.status === "Active" ? "Suspend" : "Reactivate"}
+            {busy ? "Saving…" : suspendTarget?.status === "Active" ? "Suspend" : "Reactivate"}
           </button>
         </div>
       </Modal>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
+import AdminMain from "@/components/admin/AdminMain";
 import ProductThumb from "@/components/admin/ProductThumb";
 import PackVariantsEditor, {
   draftsToVariants,
@@ -143,7 +144,7 @@ export default function NewProductPage() {
           </>
         }
       />
-      <main className="flex-1 p-6">
+      <AdminMain>
         <h1 className="text-2xl font-semibold">Add product</h1>
         <p className="mt-1 text-sm text-neutral-500">Create a new catalog item for the storefront.</p>
 
@@ -306,7 +307,7 @@ export default function NewProductPage() {
             </Link>
           </div>
         </form>
-      </main>
+      </AdminMain>
     </>
   );
 }

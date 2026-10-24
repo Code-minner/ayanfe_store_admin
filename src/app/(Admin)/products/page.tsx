@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import TopBar from "@/components/admin/TopBar";
+import AdminMain from "@/components/admin/AdminMain";
 import RequirePermission from "@/components/admin/RequirePermission";
 import ProductThumb from "@/components/admin/ProductThumb";
 import SearchInput from "@/components/ui/SearchInput";
 import { useAuth } from "@/context/AuthContext";
-import { apiGetProducts, type AdminProduct } from "@/lib/api";
+import { apiDeleteProduct, apiGetProducts, type AdminProduct } from "@/lib/api";
 import { formatDate, formatNaira } from "@/lib/format";
 
 const PAGE_SIZE = 20;
@@ -23,6 +24,7 @@ export default function ProductsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -78,10 +80,27 @@ export default function ProductsPage() {
     startTransition(() => setPage(Math.min(totalPages, Math.max(1, next))));
   };
 
+  const onDelete = async (product: AdminProduct) => {
+    if (!token) return;
+    const ok = window.confirm(`Delete "${product.name}"? This cannot be undone.`);
+    if (!ok) return;
+    setDeletingId(product.id);
+    setError("");
+    try {
+      await apiDeleteProduct(token, product.id);
+      setProducts((prev) => prev.filter((p) => p.id !== product.id));
+      setTotal((t) => Math.max(0, t - 1));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete product");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <RequirePermission permission="products">
       <TopBar breadcrumb={<span className="font-semibold text-neutral-900">Products</span>} />
-      <main className="flex-1 p-6">
+      <AdminMain>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Products</h1>
@@ -183,12 +202,37 @@ export default function ProductsPage() {
                           {p.createdAt ? formatDate(p.createdAt) : "—"}
                         </td>
                         <td className="px-3 py-3 text-right">
-                          <Link
-                            href={`/products/${p.id}`}
-                            className="rounded-lg px-2 py-1 text-sm font-medium text-[#4B0A6B] hover:bg-[#F3E6F6]"
-                          >
-                            Edit
-                          </Link>
+                          <div className="inline-flex items-center gap-2">
+                            <Link
+                              href={`/products/${p.id}`}
+                              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-[#4B0A6B] hover:bg-[#F3E6F6]"
+                            >
+                              Edit
+                            </Link>
+                            <button
+                              type="button"
+                              disabled={deletingId === p.id}
+                              onClick={() => void onDelete(p)}
+                              aria-label={`Delete ${p.name}`}
+                              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                aria-hidden
+                              >
+                                <path
+                                  d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                              {deletingId === p.id ? "Deleting…" : "Delete"}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -242,7 +286,7 @@ export default function ProductsPage() {
             </>
           )}
         </div>
-      </main>
+      </AdminMain>
     </RequirePermission>
   );
 }

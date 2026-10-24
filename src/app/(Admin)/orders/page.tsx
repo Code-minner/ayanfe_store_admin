@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
+import AdminMain from "@/components/admin/AdminMain";
 import SearchInput from "@/components/ui/SearchInput";
 import StatusPill from "@/components/ui/StatusPill";
 import { useAuth } from "@/context/AuthContext";
@@ -75,7 +76,7 @@ export default function OrdersPage() {
   return (
     <>
       <TopBar breadcrumb={<span className="font-semibold text-neutral-900">Orders</span>} />
-      <main className="flex-1 space-y-6 p-6">
+      <AdminMain className="space-y-6">
         <h1 className="text-2xl font-semibold">Orders</h1>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
@@ -153,7 +154,7 @@ export default function OrdersPage() {
             </div>
           )}
         </div>
-      </main>
+      </AdminMain>
     </>
   );
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
+import AdminMain from "@/components/admin/AdminMain";
 import RequirePermission from "@/components/admin/RequirePermission";
 import { useAuth } from "@/context/AuthContext";
 import { apiGetStats, type AdminStats } from "@/lib/api";
@@ -134,7 +135,7 @@ export default function DashboardPage() {
   return (
     <RequirePermission permission="dashboard">
       <TopBar />
-      <main className="flex-1 space-y-6 p-6">
+      <AdminMain className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold text-neutral-900">Hello {name}</h1>
           <p className="mt-1 text-sm text-neutral-500">
@@ -340,7 +341,7 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-      </main>
+      </AdminMain>
     </RequirePermission>
   );
 }

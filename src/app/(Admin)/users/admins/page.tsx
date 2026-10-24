@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
+import AdminMain from "@/components/admin/AdminMain";
 import RequirePermission from "@/components/admin/RequirePermission";
 import SearchInput from "@/components/ui/SearchInput";
 import StatusPill from "@/components/ui/StatusPill";
@@ -117,7 +118,7 @@ export default function AdminsPage() {
           </>
         }
       />
-      <main className="flex-1 p-6">
+      <AdminMain>
         <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
           <div className="flex gap-6 border-b border-neutral-100">
             {(["admins", "roles"] as const).map((t) => (
@@ -260,7 +261,7 @@ export default function AdminsPage() {
             </div>
           )}
         </div>
-      </main>
+      </AdminMain>
 
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Invite staff">
         <form className="space-y-4" onSubmit={(e) => void onInvite(e)}>

@@ -8,7 +8,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { apiLogin, apiMe, type AdminUser } from "@/lib/api";
+import {
+  apiLogin,
+  apiMe,
+  apiUpdateProfile,
+  apiUploadAvatar,
+  type AdminUser,
+} from "@/lib/api";
 import {
   can,
   homePathForRole,
@@ -28,6 +34,13 @@ type AuthContextValue = {
   homePath: string;
   login: (email: string, password: string) => Promise<string>;
   logout: () => void;
+  updateProfile: (body: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+  }) => Promise<AdminUser>;
+  uploadAvatar: (file: File) => Promise<AdminUser>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -96,6 +109,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout: () => {
         setToken(null);
         setUser(null);
+      },
+      updateProfile: async (body) => {
+        if (!token) throw new Error("Not signed in");
+        const { user: next } = await apiUpdateProfile(token, body);
+        setUser(next);
+        return next;
+      },
+      uploadAvatar: async (file) => {
+        if (!token) throw new Error("Not signed in");
+        const { user: next } = await apiUploadAvatar(token, file);
+        setUser(next);
+        return next;
       },
     };
   }, [user, token, hydrated]);
