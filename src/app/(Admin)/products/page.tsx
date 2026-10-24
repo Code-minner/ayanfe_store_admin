@@ -106,8 +106,8 @@ export default function ProductsPage() {
             <h1 className="text-2xl font-semibold">Products</h1>
             <p className="mt-1 text-sm text-neutral-500">
               {loading
-                ? "Loading…"
-                : `${total} ${status === "all" ? "" : status + " "}product${total === 1 ? "" : "s"} · page ${page} of ${totalPages}`}
+                ? "Loading..."
+                : `${total} ${status === "all" ? "" : status + " "}product${total === 1 ? "" : "s"} | page ${page} of ${totalPages}`}
             </p>
           </div>
           <Link
@@ -120,7 +120,7 @@ export default function ProductsPage() {
 
         <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
           <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-            <SearchInput value={q} onChange={setQ} placeholder="Search name, slug, category…" />
+            <SearchInput value={q} onChange={setQ} placeholder="Search name, slug, category..." />
             <div className="inline-flex rounded-xl border border-neutral-200 bg-neutral-50 p-1">
               {(
                 [
@@ -186,7 +186,7 @@ export default function ProductsPage() {
                             <span className="text-amber-700">No price</span>
                           )}
                         </td>
-                        <td className="px-3 py-3 text-neutral-600">{p.stock ?? "—"}</td>
+                        <td className="px-3 py-3 text-neutral-600">{p.stock ?? "-"}</td>
                         <td className="px-3 py-3">
                           <span
                             className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -199,7 +199,7 @@ export default function ProductsPage() {
                           </span>
                         </td>
                         <td className="px-3 py-3 text-neutral-600">
-                          {p.createdAt ? formatDate(p.createdAt) : "—"}
+                          {p.createdAt ? formatDate(p.createdAt) : "-"}
                         </td>
                         <td className="px-3 py-3 text-right">
                           <div className="inline-flex items-center gap-2">
@@ -230,7 +230,7 @@ export default function ProductsPage() {
                                   strokeLinejoin="round"
                                 />
                               </svg>
-                              {deletingId === p.id ? "Deleting…" : "Delete"}
+                              {deletingId === p.id ? "Deleting..." : "Delete"}
                             </button>
                           </div>
                         </td>
@@ -245,7 +245,7 @@ export default function ProductsPage() {
                 aria-label="Products pagination"
               >
                 <p className="text-xs text-neutral-500">
-                  Showing {total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–
+                  Showing {total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}-
                   {Math.min(page * PAGE_SIZE, total)} of {total}
                 </p>
                 <div className="flex items-center gap-1.5">

@@ -25,8 +25,8 @@ export default function Modal({
         onClick={onClose}
       />
       <div
-        className={`relative z-10 w-full rounded-2xl bg-white p-6 shadow-[0_20px_60px_rgba(0,0,0,0.18)] ${
-          wide ? "max-w-xl" : "max-w-md"
+        className={`relative z-10 max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white p-6 shadow-[0_20px_60px_rgba(0,0,0,0.18)] ${
+          wide ? "max-w-3xl" : "max-w-md"
         }`}
       >
         <div className="mb-5 flex items-start justify-between gap-3">
@@ -37,7 +37,7 @@ export default function Modal({
             className="grid h-8 w-8 place-items-center rounded-full text-neutral-500 hover:bg-neutral-100"
             aria-label="Close"
           >
-            ×
+            x
           </button>
         </div>
         {children}

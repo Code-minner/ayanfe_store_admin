@@ -161,6 +161,7 @@ export async function apiCreateProduct(
     price: number;
     categorySlug: string;
     category?: string;
+    brand?: string;
     stock?: number;
     isFeatured?: boolean;
     isNewArrival?: boolean;
@@ -202,6 +203,7 @@ export type ProductWriteBody = {
   price?: number;
   categorySlug?: string;
   category?: string;
+  brand?: string | null;
   stock?: number;
   isFeatured?: boolean;
   isNewArrival?: boolean;
@@ -267,6 +269,9 @@ export type AdminOrder = {
     image: string;
     price: number;
     quantity: number;
+    color?: string;
+    size?: string;
+    brand?: string;
   }[];
   subtotal: number;
   fee: number;
@@ -289,8 +294,39 @@ export type AdminOrder = {
     shippingFee?: number;
   } | null;
   invoiceNumber?: string | null;
+  waybillNumber?: string | null;
   createdAt: string;
 };
+
+export async function apiPrintOrders(
+  token: string,
+  opts: { type: "invoice" | "waybill"; ids?: string[]; from?: string; to?: string }
+) {
+  const qs = new URLSearchParams();
+  qs.set("type", opts.type);
+  if (opts.ids?.length) qs.set("ids", opts.ids.join(","));
+  if (opts.from) qs.set("from", opts.from);
+  if (opts.to) qs.set("to", opts.to);
+  const res = await fetch(`${API_URL}/orders/print?${qs.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  const html = await res.text();
+  if (!res.ok) {
+    let message = "Could not open print view";
+    try {
+      message = (JSON.parse(html) as { message?: string }).message || message;
+    } catch {
+      /* html error page */
+    }
+    throw new Error(message);
+  }
+  const win = window.open("", "_blank");
+  if (!win) throw new Error("Pop-up blocked. Allow pop-ups to print.");
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+}
 
 export type AdminProductVariant = {
   id: string;
@@ -309,6 +345,7 @@ export type AdminProduct = {
   description?: string;
   category?: string | null;
   categorySlug: string;
+  brand?: string | null;
   stock?: number;
   active?: boolean;
   isFeatured?: boolean;

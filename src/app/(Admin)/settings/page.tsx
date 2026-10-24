@@ -203,7 +203,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <p className="text-center text-xs text-neutral-500">
-                    {uploading ? "Uploading photo…" : "Tap the photo to change it"}
+                    {uploading ? "Uploading photo..." : "Tap the photo to change it"}
                   </p>
 
                   <div className="grid gap-5 sm:grid-cols-2">
@@ -280,7 +280,7 @@ export default function SettingsPage() {
                     disabled={saving || uploading}
                     className="rounded-xl bg-[#4B0A6B] px-6 py-3 text-sm font-semibold text-white hover:bg-[#3a0854] disabled:opacity-60"
                   >
-                    {saving ? "Saving…" : "Save changes"}
+                    {saving ? "Saving..." : "Save changes"}
                   </button>
                 </form>
               ) : (
@@ -321,7 +321,7 @@ export default function SettingsPage() {
                     disabled={saving}
                     className="rounded-xl bg-[#4B0A6B] px-6 py-3 text-sm font-semibold text-white hover:bg-[#3a0854] disabled:opacity-60"
                   >
-                    {saving ? "Saving…" : "Save changes"}
+                    {saving ? "Saving..." : "Save changes"}
                   </button>
                 </form>
               )}

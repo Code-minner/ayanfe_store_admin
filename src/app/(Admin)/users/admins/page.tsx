@@ -168,7 +168,7 @@ export default function AdminsPage() {
                   {loading ? (
                     <tr>
                       <td colSpan={6} className="px-3 py-10 text-center text-neutral-500">
-                        Loading admins…
+                        Loading admins...
                       </td>
                     </tr>
                   ) : filtered.length === 0 ? (
@@ -193,7 +193,7 @@ export default function AdminsPage() {
                             className="rounded-lg p-2 hover:bg-neutral-50"
                             onClick={() => setMenuFor(menuFor === a.id ? null : a.id)}
                           >
-                            ⋮
+                            ...
                           </button>
                           {menuFor === a.id && (
                             <div className="absolute right-3 z-10 mt-1 w-44 rounded-xl border border-neutral-200 bg-white py-2 text-left shadow-lg">
@@ -316,7 +316,7 @@ export default function AdminsPage() {
               disabled={inviting}
               className="rounded-xl bg-[#4B0A6B] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {inviting ? "Sending…" : "Send invite"}
+              {inviting ? "Sending..." : "Send invite"}
             </button>
           </div>
         </form>

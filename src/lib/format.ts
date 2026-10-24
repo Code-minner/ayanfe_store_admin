@@ -1,5 +1,5 @@
 export function formatNaira(value: number) {
-  return `₦${value.toLocaleString("en-NG")}`;
+  return `\u20A6${value.toLocaleString("en-NG")}`;
 }
 
 export function formatDate(value: string | Date) {
@@ -22,7 +22,7 @@ export function formatMomChange(pct: number | null | undefined): {
   if (pct === 0) return { text: "Same as last month", up: null };
   const up = pct > 0;
   return {
-    text: `${up ? "↑" : "↓"} ${Math.abs(pct)}% vs last month`,
+    text: `${up ? "\u2191" : "\u2193"} ${Math.abs(pct)}% vs last month`,
     up,
   };
 }

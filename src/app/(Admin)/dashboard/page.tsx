@@ -145,7 +145,7 @@ export default function DashboardPage() {
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         {loading && !stats ? (
-          <p className="text-sm text-neutral-500">Loading dashboard…</p>
+          <p className="text-sm text-neutral-500">Loading dashboard...</p>
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -168,8 +168,8 @@ export default function DashboardPage() {
             value={String(stats?.activeProducts ?? 0)}
             hint={
               stats
-                ? `${stats.totalProducts} in catalog · ${stats.inactiveProducts} inactive`
-                : "See all →"
+                ? `${stats.totalProducts} in catalog | ${stats.inactiveProducts} inactive`
+                : "See all \u2192"
             }
             up={null}
             href="/products"
@@ -236,7 +236,7 @@ export default function DashboardPage() {
               {formatNaira(stats?.revenueInflow ?? 0)}
             </p>
             <p className="mt-1 text-xs font-medium text-neutral-500">
-              All order value · confirmed {formatNaira(stats?.revenueConfirmed ?? 0)}
+              All order value | confirmed {formatNaira(stats?.revenueConfirmed ?? 0)}
             </p>
             <div className="mt-6 flex items-center gap-6">
               <div
@@ -260,7 +260,7 @@ export default function DashboardPage() {
                   Confirmed {paidCount} ({paidPayPct}%)
                 </li>
                 <li className="text-xs text-neutral-500">
-                  Paystack {stats?.byMethod?.paystack?.count ?? 0} · Bank{" "}
+                  Paystack {stats?.byMethod?.paystack?.count ?? 0} | Bank{" "}
                   {stats?.byMethod?.bank_transfer?.count ?? 0}
                 </li>
               </ul>
@@ -276,7 +276,7 @@ export default function DashboardPage() {
                 {yearCustomers.toLocaleString()} signup{yearCustomers === 1 ? "" : "s"} in{" "}
                 {chartYear}
                 {stats?.customers != null
-                  ? ` · ${stats.customers.toLocaleString()} total customers`
+                  ? ` | ${stats.customers.toLocaleString()} total customers`
                   : ""}
               </p>
             </div>

@@ -48,7 +48,7 @@ export default function CustomerProfilePage() {
       />
       <AdminMain className="space-y-6">
         {loading ? (
-          <p className="text-sm text-neutral-500">Loading…</p>
+          <p className="text-sm text-neutral-500">Loading...</p>
         ) : error ? (
           <p className="text-sm text-red-600">{error}</p>
         ) : customer ? (
@@ -76,11 +76,11 @@ export default function CustomerProfilePage() {
               <dl className="mt-8 grid gap-5 sm:grid-cols-2">
                 <div>
                   <dt className="text-sm text-neutral-500">First name</dt>
-                  <dd className="mt-1 font-medium">{customer.firstName || "—"}</dd>
+                  <dd className="mt-1 font-medium">{customer.firstName || "-"}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-neutral-500">Last name</dt>
-                  <dd className="mt-1 font-medium">{customer.lastName || "—"}</dd>
+                  <dd className="mt-1 font-medium">{customer.lastName || "-"}</dd>
                 </div>
                 <div className="sm:col-span-2">
                   <dt className="text-sm text-neutral-500">Email</dt>
@@ -88,7 +88,7 @@ export default function CustomerProfilePage() {
                 </div>
                 <div className="sm:col-span-2">
                   <dt className="text-sm text-neutral-500">Phone</dt>
-                  <dd className="mt-1 font-medium">{customer.phone || "—"}</dd>
+                  <dd className="mt-1 font-medium">{customer.phone || "-"}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-neutral-500">Registered</dt>

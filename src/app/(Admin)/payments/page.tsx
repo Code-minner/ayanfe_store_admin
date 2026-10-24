@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
 import AdminMain from "@/components/admin/AdminMain";
@@ -185,7 +184,7 @@ export default function PaymentsPage() {
                 }`}
               >
                 {confirmed.text}
-                {stats ? ` · ${stats.paidCount} paid orders` : ""}
+                {stats ? ` | ${stats.paidCount} paid orders` : ""}
               </p>
             </div>
             <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
@@ -220,7 +219,7 @@ export default function PaymentsPage() {
                 }`}
               >
                 {pending.text}
-                {stats ? ` · ${stats.pendingPayCount} orders` : ""}
+                {stats ? ` | ${stats.pendingPayCount} orders` : ""}
               </p>
             </div>
           </div>
@@ -234,7 +233,7 @@ export default function PaymentsPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-semibold">Transactions</h2>
             <p className="text-sm text-neutral-500">
-              {loading ? "Loading…" : `${rows.length} shown`}
+              {loading ? "Loading..." : `${rows.length} shown`}
             </p>
           </div>
           <div className="mt-4 flex flex-wrap gap-6 border-b border-neutral-100">
@@ -255,7 +254,7 @@ export default function PaymentsPage() {
             <SearchInput
               value={q}
               onChange={setQ}
-              placeholder="Search email, name, invoice, id…"
+              placeholder="Search email, name, invoice, id..."
             />
             <div className="flex flex-wrap gap-2">
               {METHOD_FILTERS.map((m) => (
@@ -321,7 +320,7 @@ export default function PaymentsPage() {
                         className="rounded-lg p-2 hover:bg-neutral-50"
                         onClick={() => setMenuFor(menuFor === o.id ? null : o.id)}
                       >
-                        ⋮
+                        ...
                       </button>
                       {menuFor === o.id && (
                         <div className="absolute right-3 z-10 mt-1 w-44 rounded-xl border border-neutral-200 bg-white py-2 text-left shadow-lg">
@@ -372,7 +371,7 @@ export default function PaymentsPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-neutral-500">
-                {detail.invoiceNumber || detail.id} · {detail.email}
+                {detail.invoiceNumber || detail.id} | {detail.email}
               </p>
               <StatusPill status={detail.status} />
             </div>
@@ -400,7 +399,7 @@ export default function PaymentsPage() {
                     className="flex items-center justify-between gap-3 rounded-xl bg-neutral-50 px-3 py-2 text-sm"
                   >
                     <span className="min-w-0 truncate">
-                      {item.name} × {item.quantity}
+                      {item.name} x {item.quantity}
                     </span>
                     <span className="shrink-0 font-medium">
                       {formatNaira(item.price * item.quantity)}
@@ -413,20 +412,24 @@ export default function PaymentsPage() {
             <div>
               <p className="text-sm font-medium">Payment receipt</p>
               {detail.receiptUrl ? (
-                <a
-                  href={detail.receiptUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="relative mt-3 block overflow-hidden rounded-xl border border-neutral-200"
-                >
-                  <Image
-                    src={detail.receiptUrl}
-                    alt="Receipt"
-                    width={480}
-                    height={320}
-                    className="h-auto w-full object-cover"
-                  />
-                </a>
+                <div className="mt-3 space-y-2">
+                  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={detail.receiptUrl}
+                      alt="Receipt"
+                      className="mx-auto max-h-[50vh] w-auto max-w-full object-contain"
+                    />
+                  </div>
+                  <a
+                    href={detail.receiptUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-block text-sm font-medium text-[#4B0A6B] underline"
+                  >
+                    Download / open file
+                  </a>
+                </div>
               ) : (
                 <p className="mt-2 text-sm text-neutral-500">
                   {detail.paymentMethod === "paystack"
@@ -453,7 +456,7 @@ export default function PaymentsPage() {
                   className="rounded-xl bg-[#4B0A6B] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
                 >
                   {acting
-                    ? "Saving…"
+                    ? "Saving..."
                     : PAID_STATUSES.has(detail.status)
                       ? "Already confirmed"
                       : "Confirm payment"}

@@ -122,7 +122,7 @@ export default function CustomersPage() {
                 {loading ? (
                   <tr>
                     <td colSpan={6} className="px-3 py-10 text-center text-neutral-500">
-                      Loading customers…
+                      Loading customers...
                     </td>
                   </tr>
                 ) : rows.length === 0 ? (
@@ -150,7 +150,7 @@ export default function CustomersPage() {
                         </div>
                       </td>
                       <td className="px-3 py-3 text-neutral-600">{formatDate(c.registeredAt)}</td>
-                      <td className="px-3 py-3 text-neutral-600">{c.phone || "—"}</td>
+                      <td className="px-3 py-3 text-neutral-600">{c.phone || "-"}</td>
                       <td className="px-3 py-3 text-neutral-600">{c.orders}</td>
                       <td className="px-3 py-3">
                         <StatusPill status={c.status} />
@@ -231,7 +231,7 @@ export default function CustomersPage() {
             onClick={() => void confirmSuspend()}
             className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {busy ? "Saving…" : suspendTarget?.status === "Active" ? "Suspend" : "Reactivate"}
+            {busy ? "Saving..." : suspendTarget?.status === "Active" ? "Suspend" : "Reactivate"}
           </button>
         </div>
       </Modal>

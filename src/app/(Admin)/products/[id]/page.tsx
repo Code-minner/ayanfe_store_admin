@@ -45,6 +45,7 @@ export default function ProductEditPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [gallery, setGallery] = useState<string[]>([]);
   const [subtitle, setSubtitle] = useState("");
+  const [brand, setBrand] = useState("");
   const [badge, setBadge] = useState("");
   const [isFeatured, setIsFeatured] = useState(false);
   const [isNewArrival, setIsNewArrival] = useState(false);
@@ -79,6 +80,7 @@ export default function ProductEditPage() {
         setImageUrl(p.image);
         setGallery(p.images?.length ? p.images : p.image ? [p.image] : []);
         setSubtitle(p.subtitle || "");
+        setBrand(p.brand || "");
         setBadge(p.badge || "");
         setIsFeatured(Boolean(p.isFeatured));
         setIsNewArrival(Boolean(p.isNewArrival));
@@ -155,6 +157,7 @@ export default function ProductEditPage() {
         stock: Math.max(0, Number.parseInt(stock || "0", 10) || 0),
         variants: packVariants,
         subtitle: subtitle.trim() || null,
+        brand: brand.trim() || null,
         badge: badge.trim() || null,
         isFeatured,
         isNewArrival,
@@ -319,11 +322,11 @@ export default function ProductEditPage() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="block text-sm font-medium">
-              Subtitle
+              Brand
               <input
-                value={subtitle}
-                onChange={(e) => setSubtitle(e.target.value)}
-                placeholder="e.g. Sizes: 40, 41, 42"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                placeholder="e.g. TITANIUM, AYE01"
                 className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
               />
             </label>
@@ -338,11 +341,21 @@ export default function ProductEditPage() {
             </label>
           </div>
 
+          <label className="block text-sm font-medium">
+            Subtitle
+            <input
+              value={subtitle}
+              onChange={(e) => setSubtitle(e.target.value)}
+              placeholder="e.g. Sizes: 40, 41, 42"
+              className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
+            />
+          </label>
+
           <div>
             <p className="text-sm font-medium">Main image</p>
             <div className="mt-2 flex flex-wrap items-start gap-4">
               <label className="inline-flex cursor-pointer items-center rounded-xl border border-neutral-300 px-4 py-2.5 text-sm font-medium hover:bg-neutral-50">
-                {uploading ? "Uploading…" : "Upload image"}
+                {uploading ? "Uploading..." : "Upload image"}
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
@@ -387,7 +400,7 @@ export default function ProductEditPage() {
                       className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-neutral-900 text-[10px] text-white"
                       aria-label="Remove image"
                     >
-                      ×
+                      x
                     </button>
                   </div>
                 ))}
@@ -424,7 +437,7 @@ export default function ProductEditPage() {
               disabled={saving || uploading}
               className="rounded-xl bg-[#4B0A6B] px-6 py-3 text-sm font-semibold text-white hover:bg-[#3a0854] disabled:opacity-50"
             >
-              {saving ? "Saving…" : "Save changes"}
+              {saving ? "Saving..." : "Save changes"}
             </button>
           </div>
         </form>

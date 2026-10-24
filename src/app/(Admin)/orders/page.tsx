@@ -8,15 +8,38 @@ import AdminMain from "@/components/admin/AdminMain";
 import SearchInput from "@/components/ui/SearchInput";
 import StatusPill from "@/components/ui/StatusPill";
 import { useAuth } from "@/context/AuthContext";
-import { apiGetOrders, apiGetStats, type AdminOrder, type AdminStats } from "@/lib/api";
+import { apiGetOrders, apiGetStats, apiPrintOrders, type AdminOrder, type AdminStats } from "@/lib/api";
 import { formatDate, formatNaira } from "@/lib/format";
 
 const TABS = [
   { key: "all", label: "All" },
   { key: "pending_verification", label: "Pending" },
-  { key: "shipped", label: "Delivered" },
+  { key: "on_hold", label: "On hold" },
+  { key: "completed", label: "Completed" },
+  { key: "shipped", label: "Shipped" },
   { key: "cancelled", label: "Cancelled" },
 ];
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+function monthRangeIso(year: number, fromMonth: number, toMonth: number) {
+  const from = new Date(Date.UTC(year, fromMonth, 1));
+  const to = new Date(Date.UTC(year, toMonth + 1, 0, 23, 59, 59, 999));
+  return { from: from.toISOString(), to: to.toISOString() };
+}
 
 export default function OrdersPage() {
   const { token, can } = useAuth();
@@ -27,6 +50,10 @@ export default function OrdersPage() {
   const [summary, setSummary] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [printYear, setPrintYear] = useState(new Date().getFullYear());
+  const [fromMonth, setFromMonth] = useState(2); // March
+  const [toMonth, setToMonth] = useState(9); // October
+  const [printing, setPrinting] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -67,17 +94,86 @@ export default function OrdersPage() {
       orders.filter((o) => o.status.includes("pending")).length,
     completed:
       summary?.ordersCompleted ??
-      orders.filter((o) => ["paid", "processing", "shipped"].includes(o.status)).length,
+      orders.filter((o) =>
+        ["paid", "processing", "shipped", "completed"].includes(o.status)
+      ).length,
     canceled:
       summary?.ordersCanceled ??
       orders.filter((o) => ["cancelled", "failed"].includes(o.status)).length,
+  };
+
+  const printWaybills = async () => {
+    if (!token) return;
+    if (fromMonth > toMonth) {
+      setError("Start month must be before end month");
+      return;
+    }
+    setPrinting(true);
+    setError("");
+    try {
+      const range = monthRangeIso(printYear, fromMonth, toMonth);
+      await apiPrintOrders(token, { type: "waybill", ...range });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not print waybills");
+    } finally {
+      setPrinting(false);
+    }
   };
 
   return (
     <>
       <TopBar breadcrumb={<span className="font-semibold text-neutral-900">Orders</span>} />
       <AdminMain className="space-y-6">
-        <h1 className="text-2xl font-semibold">Orders</h1>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h1 className="text-2xl font-semibold">Orders</h1>
+          <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm">
+            <label className="text-xs font-medium text-neutral-600">
+              Year
+              <input
+                type="number"
+                value={printYear}
+                onChange={(e) => setPrintYear(Number(e.target.value) || printYear)}
+                className="mt-1 block w-24 rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+              />
+            </label>
+            <label className="text-xs font-medium text-neutral-600">
+              From
+              <select
+                value={fromMonth}
+                onChange={(e) => setFromMonth(Number(e.target.value))}
+                className="mt-1 block rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+              >
+                {MONTHS.map((m, i) => (
+                  <option key={m} value={i}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-neutral-600">
+              To
+              <select
+                value={toMonth}
+                onChange={(e) => setToMonth(Number(e.target.value))}
+                className="mt-1 block rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+              >
+                {MONTHS.map((m, i) => (
+                  <option key={m} value={i}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              disabled={printing || !token}
+              onClick={() => void printWaybills()}
+              className="rounded-xl bg-[#4B0A6B] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3a0854] disabled:opacity-50"
+            >
+              {printing ? "Opening..." : "Print waybills"}
+            </button>
+          </div>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
             ["All orders", stats.all],
@@ -144,7 +240,7 @@ export default function OrdersPage() {
                         <td className="px-3 py-3 text-neutral-600">{formatNaira(o.total)}</td>
                         <td className="px-3 py-3"><StatusPill status={o.status} /></td>
                         <td className="px-3 py-3 text-right">
-                          <Link href={`/orders/${o.id}`} className="rounded-lg px-2 py-1 text-neutral-500 hover:bg-neutral-50">⋮</Link>
+                          <Link href={`/orders/${o.id}`} className="rounded-lg px-2 py-1 text-neutral-500 hover:bg-neutral-50">...</Link>
                         </td>
                       </tr>
                     );

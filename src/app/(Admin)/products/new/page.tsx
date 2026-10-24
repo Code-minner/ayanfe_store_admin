@@ -41,6 +41,7 @@ export default function NewProductPage() {
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [subtitle, setSubtitle] = useState("");
+  const [brand, setBrand] = useState("");
   const [isFeatured, setIsFeatured] = useState(false);
   const [isNewArrival, setIsNewArrival] = useState(false);
   const [active, setActive] = useState(true);
@@ -120,6 +121,7 @@ export default function NewProductPage() {
         stock: Math.max(0, Number.parseInt(stock || "0", 10) || 0),
         variants: packVariants,
         subtitle: subtitle.trim() || undefined,
+        brand: brand.trim() || undefined,
         isFeatured,
         isNewArrival,
         active,
@@ -206,6 +208,16 @@ export default function NewProductPage() {
           <PackVariantsEditor variants={variants} onChange={setVariants} />
 
           <label className="block text-sm font-medium">
+            Brand
+            <input
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="e.g. TITANIUM, AYE01"
+              className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
+            />
+          </label>
+
+          <label className="block text-sm font-medium">
             Category
             <select
               value={categorySlug}
@@ -245,7 +257,7 @@ export default function NewProductPage() {
             <p className="text-sm font-medium">Product image</p>
             <div className="mt-2 flex flex-wrap items-start gap-4">
               <label className="inline-flex cursor-pointer items-center rounded-xl border border-neutral-300 px-4 py-2.5 text-sm font-medium hover:bg-neutral-50">
-                {uploading ? "Uploading…" : "Upload image"}
+                {uploading ? "Uploading..." : "Upload image"}
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
@@ -297,7 +309,7 @@ export default function NewProductPage() {
               disabled={saving || uploading}
               className="rounded-xl bg-[#4B0A6B] px-6 py-3 text-sm font-semibold text-white hover:bg-[#3a0854] disabled:opacity-50"
             >
-              {saving ? "Saving…" : "Create product"}
+              {saving ? "Saving..." : "Create product"}
             </button>
             <Link
               href="/products"

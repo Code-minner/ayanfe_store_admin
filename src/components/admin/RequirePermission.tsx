@@ -24,7 +24,7 @@ export default function RequirePermission({
   if (!hydrated || !isStaff || !allowed) {
     return (
       <div className="grid flex-1 place-items-center p-6 text-sm text-neutral-500">
-        Checking access…
+        Checking access...
       </div>
     );
   }
