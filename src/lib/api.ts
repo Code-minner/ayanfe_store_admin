@@ -300,13 +300,20 @@ export type AdminOrder = {
 
 export async function apiPrintOrders(
   token: string,
-  opts: { type: "invoice" | "waybill"; ids?: string[]; from?: string; to?: string }
+  opts: {
+    type: "invoice" | "waybill";
+    ids?: string[];
+    from?: string;
+    to?: string;
+    method?: "local_pickup" | "waybill" | "stockpile" | "lagos_delivery" | "all";
+  }
 ) {
   const qs = new URLSearchParams();
   qs.set("type", opts.type);
   if (opts.ids?.length) qs.set("ids", opts.ids.join(","));
   if (opts.from) qs.set("from", opts.from);
   if (opts.to) qs.set("to", opts.to);
+  if (opts.method && opts.method !== "all") qs.set("method", opts.method);
   const res = await fetch(`${API_URL}/orders/print?${qs.toString()}`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",

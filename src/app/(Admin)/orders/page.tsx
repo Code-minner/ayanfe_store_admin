@@ -53,7 +53,19 @@ export default function OrdersPage() {
   const [printYear, setPrintYear] = useState(new Date().getFullYear());
   const [fromMonth, setFromMonth] = useState(2); // March
   const [toMonth, setToMonth] = useState(9); // October
+  const [printType, setPrintType] = useState<"invoice" | "waybill">("invoice");
+  const [printMethod, setPrintMethod] = useState<
+    "all" | "local_pickup" | "waybill" | "stockpile" | "lagos_delivery"
+  >("all");
   const [printing, setPrinting] = useState(false);
+
+  const deliveryLabel = (method?: string) => {
+    if (method === "local_pickup") return "Local pickup";
+    if (method === "waybill") return "Waybill";
+    if (method === "stockpile") return "Stockpile";
+    if (method === "lagos_delivery") return "Lagos delivery";
+    return method ? method.replace(/_/g, " ") : "-";
+  };
 
   useEffect(() => {
     if (!token) return;
@@ -102,7 +114,7 @@ export default function OrdersPage() {
       orders.filter((o) => ["cancelled", "failed"].includes(o.status)).length,
   };
 
-  const printWaybills = async () => {
+  const printDocs = async () => {
     if (!token) return;
     if (fromMonth > toMonth) {
       setError("Start month must be before end month");
@@ -112,9 +124,15 @@ export default function OrdersPage() {
     setError("");
     try {
       const range = monthRangeIso(printYear, fromMonth, toMonth);
-      await apiPrintOrders(token, { type: "waybill", ...range });
+      const method =
+        printType === "waybill" && printMethod === "all" ? "waybill" : printMethod;
+      await apiPrintOrders(token, {
+        type: printType,
+        method,
+        ...range,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not print waybills");
+      setError(err instanceof Error ? err.message : "Could not open print view");
     } finally {
       setPrinting(false);
     }
@@ -126,7 +144,45 @@ export default function OrdersPage() {
       <AdminMain className="space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <h1 className="text-2xl font-semibold">Orders</h1>
-          <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm">
+          <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-neutral-200 bg-white p-3">
+            <label className="text-xs font-medium text-neutral-600">
+              Doc
+              <select
+                value={printType}
+                onChange={(e) => {
+                  const next = e.target.value as "invoice" | "waybill";
+                  setPrintType(next);
+                  if (next === "waybill") setPrintMethod("waybill");
+                }}
+                className="mt-1 block rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+              >
+                <option value="invoice">Invoices</option>
+                <option value="waybill">Waybills</option>
+              </select>
+            </label>
+            <label className="text-xs font-medium text-neutral-600">
+              Delivery
+              <select
+                value={printMethod}
+                onChange={(e) =>
+                  setPrintMethod(
+                    e.target.value as
+                      | "all"
+                      | "local_pickup"
+                      | "waybill"
+                      | "stockpile"
+                      | "lagos_delivery"
+                  )
+                }
+                className="mt-1 block rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+              >
+                <option value="all">All methods</option>
+                <option value="local_pickup">Local pickup</option>
+                <option value="waybill">Waybill (outside Lagos)</option>
+                <option value="stockpile">Stockpile</option>
+                <option value="lagos_delivery">Lagos delivery</option>
+              </select>
+            </label>
             <label className="text-xs font-medium text-neutral-600">
               Year
               <input
@@ -167,10 +223,14 @@ export default function OrdersPage() {
             <button
               type="button"
               disabled={printing || !token}
-              onClick={() => void printWaybills()}
+              onClick={() => void printDocs()}
               className="rounded-xl bg-[#4B0A6B] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3a0854] disabled:opacity-50"
             >
-              {printing ? "Opening..." : "Print waybills"}
+              {printing
+                ? "Opening..."
+                : printType === "waybill"
+                  ? "Print waybills"
+                  : "Print invoices"}
             </button>
           </div>
         </div>
@@ -214,6 +274,7 @@ export default function OrdersPage() {
                     <th className="px-3 py-3 font-medium">Product</th>
                     <th className="px-3 py-3 font-medium">Date</th>
                     <th className="px-3 py-3 font-medium">Customer</th>
+                    <th className="px-3 py-3 font-medium">Delivery</th>
                     <th className="px-3 py-3 font-medium">Price</th>
                     <th className="px-3 py-3 font-medium">Status</th>
                     <th className="px-3 py-3" />
@@ -237,6 +298,9 @@ export default function OrdersPage() {
                         </td>
                         <td className="px-3 py-3 text-neutral-600">{formatDate(o.createdAt)}</td>
                         <td className="px-3 py-3 text-neutral-600">{o.email}</td>
+                        <td className="px-3 py-3 text-neutral-600">
+                          {deliveryLabel(o.shipping?.method)}
+                        </td>
                         <td className="px-3 py-3 text-neutral-600">{formatNaira(o.total)}</td>
                         <td className="px-3 py-3"><StatusPill status={o.status} /></td>
                         <td className="px-3 py-3 text-right">
