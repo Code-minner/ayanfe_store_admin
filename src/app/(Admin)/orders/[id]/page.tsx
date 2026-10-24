@@ -92,7 +92,6 @@ export default function OrderDetailsPage() {
     .filter(Boolean)
     .join(", ");
   const shippingFee = ship?.shippingFee ?? 0;
-  const serviceFee = Math.max(0, order.fee - shippingFee);
 
   return (
     <>
@@ -228,10 +227,8 @@ export default function OrderDetailsPage() {
               <span className="text-neutral-500">Subtotal:</span> {formatNaira(order.subtotal)}
             </p>
             <p>
-              <span className="text-neutral-500">Service fee:</span> {formatNaira(serviceFee)}
-            </p>
-            <p>
-              <span className="text-neutral-500">Delivery:</span> {formatNaira(shippingFee)}
+              <span className="text-neutral-500">Delivery:</span>{" "}
+              {shippingFee > 0 ? formatNaira(shippingFee) : "Free"}
             </p>
             <p className="font-semibold">
               <span className="font-normal text-neutral-500">Total:</span> {formatNaira(order.total)}
