@@ -6,9 +6,10 @@ import { useParams } from "next/navigation";
 import TopBar from "@/components/admin/TopBar";
 import AdminMain from "@/components/admin/AdminMain";
 import StatusPill from "@/components/ui/StatusPill";
+import PrintPreviewModal from "@/components/admin/PrintPreviewModal";
 import Modal from "@/components/ui/Modal";
 import { useAuth } from "@/context/AuthContext";
-import { apiGetOrder, apiPrintOrders, apiUpdateOrderStatus, type AdminOrder } from "@/lib/api";
+import { apiFetchPrintOrders, apiGetOrder, apiUpdateOrderStatus, type AdminOrder } from "@/lib/api";
 import { formatDate, formatNaira } from "@/lib/format";
 
 const STATUS_ACTIONS = [
@@ -36,6 +37,7 @@ export default function OrderDetailsPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [invoiceHtml, setInvoiceHtml] = useState("");
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [error, setError] = useState("");
 
@@ -61,14 +63,15 @@ export default function OrderDetailsPage() {
     }
   };
 
-  const printInvoice = async () => {
+  const previewInvoice = async () => {
     if (!token || !order) return;
     setPrinting(true);
     setError("");
     try {
-      await apiPrintOrders(token, { type: "invoice", ids: [order.id] });
+      const html = await apiFetchPrintOrders(token, { type: "invoice", ids: [order.id] });
+      setInvoiceHtml(html);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Print failed");
+      setError(err instanceof Error ? err.message : "Could not load invoice");
     } finally {
       setPrinting(false);
     }
@@ -108,10 +111,10 @@ export default function OrderDetailsPage() {
             <button
               type="button"
               disabled={printing}
-              onClick={() => void printInvoice()}
+              onClick={() => void previewInvoice()}
               className="rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
             >
-              {printing ? "Opening..." : "Print invoice"}
+              {printing ? "Loading..." : "Preview invoice"}
             </button>
             <div className="relative">
               <button
@@ -283,6 +286,12 @@ export default function OrderDetailsPage() {
           ) : null}
         </Modal>
       </AdminMain>
+      <PrintPreviewModal
+        open={Boolean(invoiceHtml)}
+        title="Invoice preview"
+        html={invoiceHtml}
+        onClose={() => setInvoiceHtml("")}
+      />
     </>
   );
 }

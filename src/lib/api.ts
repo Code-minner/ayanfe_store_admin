@@ -298,7 +298,7 @@ export type AdminOrder = {
   createdAt: string;
 };
 
-export async function apiPrintOrders(
+export async function apiFetchPrintOrders(
   token: string,
   opts: {
     type: "invoice" | "waybill";
@@ -328,6 +328,21 @@ export async function apiPrintOrders(
     }
     throw new Error(message);
   }
+  return html;
+}
+
+/** @deprecated Prefer apiFetchPrintOrders + in-app preview. Still opens a tab if needed. */
+export async function apiPrintOrders(
+  token: string,
+  opts: {
+    type: "invoice" | "waybill";
+    ids?: string[];
+    from?: string;
+    to?: string;
+    method?: "local_pickup" | "waybill" | "stockpile" | "lagos_delivery" | "all";
+  }
+) {
+  const html = await apiFetchPrintOrders(token, opts);
   const win = window.open("", "_blank");
   if (!win) throw new Error("Pop-up blocked. Allow pop-ups to print.");
   win.document.open();
@@ -340,6 +355,7 @@ export type AdminProductVariant = {
   label: string;
   price: number;
   stock: number;
+  maxPerOrder?: number;
 };
 
 export type AdminProduct = {

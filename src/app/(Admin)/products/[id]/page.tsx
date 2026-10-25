@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import TopBar from "@/components/admin/TopBar";
 import AdminMain from "@/components/admin/AdminMain";
 import ProductThumb from "@/components/admin/ProductThumb";
+import ColorsEditor from "@/components/admin/ColorsEditor";
 import PackVariantsEditor, {
   draftsToVariants,
   variantsToDrafts,
@@ -40,6 +41,7 @@ export default function ProductEditPage() {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("0");
   const [variants, setVariants] = useState<PackVariantDraft[]>([]);
+  const [colors, setColors] = useState<string[]>([]);
   const [categorySlug, setCategorySlug] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -75,6 +77,7 @@ export default function ProductEditPage() {
         setPrice(String(p.price ?? ""));
         setStock(String(p.stock ?? 0));
         setVariants(variantsToDrafts(p.variants));
+        setColors(Array.isArray(p.colors) ? p.colors : []);
         setCategorySlug(p.categorySlug);
         setDescription(p.description || "");
         setImageUrl(p.image);
@@ -136,7 +139,7 @@ export default function ProductEditPage() {
 
     const packVariants = draftsToVariants(variants);
     if (variants.length && !packVariants.length) {
-      setError("Fill pack label and price, or remove empty pack rows");
+      setError("Fill size/option label and price, or remove empty rows");
       return;
     }
 
@@ -156,6 +159,7 @@ export default function ProductEditPage() {
         category: categoryName,
         stock: Math.max(0, Number.parseInt(stock || "0", 10) || 0),
         variants: packVariants,
+        colors,
         subtitle: subtitle.trim() || null,
         brand: brand.trim() || null,
         badge: badge.trim() || null,
@@ -293,6 +297,8 @@ export default function ProductEditPage() {
           </div>
 
           <PackVariantsEditor variants={variants} onChange={setVariants} />
+
+          <ColorsEditor colors={colors} onChange={setColors} />
 
           <label className="block text-sm font-medium">
             Category

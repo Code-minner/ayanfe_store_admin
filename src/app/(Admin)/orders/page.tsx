@@ -8,7 +8,8 @@ import AdminMain from "@/components/admin/AdminMain";
 import SearchInput from "@/components/ui/SearchInput";
 import StatusPill from "@/components/ui/StatusPill";
 import { useAuth } from "@/context/AuthContext";
-import { apiGetOrders, apiGetStats, apiPrintOrders, type AdminOrder, type AdminStats } from "@/lib/api";
+import PrintPreviewModal from "@/components/admin/PrintPreviewModal";
+import { apiFetchPrintOrders, apiGetOrders, apiGetStats, type AdminOrder, type AdminStats } from "@/lib/api";
 import { formatDate, formatNaira } from "@/lib/format";
 
 const TABS = [
@@ -58,6 +59,8 @@ export default function OrdersPage() {
     "all" | "local_pickup" | "waybill" | "stockpile" | "lagos_delivery"
   >("all");
   const [printing, setPrinting] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [previewTitle, setPreviewTitle] = useState("Print preview");
 
   const deliveryLabel = (method?: string) => {
     if (method === "local_pickup") return "Local pickup";
@@ -126,11 +129,13 @@ export default function OrdersPage() {
       const range = monthRangeIso(printYear, fromMonth, toMonth);
       const method =
         printType === "waybill" && printMethod === "all" ? "waybill" : printMethod;
-      await apiPrintOrders(token, {
+      const html = await apiFetchPrintOrders(token, {
         type: printType,
         method,
         ...range,
       });
+      setPreviewTitle(printType === "waybill" ? "Waybill preview" : "Invoice preview");
+      setPreviewHtml(html);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not open print view");
     } finally {
@@ -227,10 +232,10 @@ export default function OrdersPage() {
               className="rounded-xl bg-[#4B0A6B] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3a0854] disabled:opacity-50"
             >
               {printing
-                ? "Opening..."
+                ? "Loading..."
                 : printType === "waybill"
-                  ? "Print waybills"
-                  : "Print invoices"}
+                  ? "Preview waybills"
+                  : "Preview invoices"}
             </button>
           </div>
         </div>
@@ -315,6 +320,12 @@ export default function OrdersPage() {
           )}
         </div>
       </AdminMain>
+      <PrintPreviewModal
+        open={Boolean(previewHtml)}
+        title={previewTitle}
+        html={previewHtml}
+        onClose={() => setPreviewHtml("")}
+      />
     </>
   );
 }

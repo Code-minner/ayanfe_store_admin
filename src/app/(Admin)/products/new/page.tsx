@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
 import AdminMain from "@/components/admin/AdminMain";
 import ProductThumb from "@/components/admin/ProductThumb";
+import ColorsEditor from "@/components/admin/ColorsEditor";
 import PackVariantsEditor, {
   draftsToVariants,
   type PackVariantDraft,
@@ -37,6 +38,7 @@ export default function NewProductPage() {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("50");
   const [variants, setVariants] = useState<PackVariantDraft[]>([]);
+  const [colors, setColors] = useState<string[]>([]);
   const [categorySlug, setCategorySlug] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -102,7 +104,7 @@ export default function NewProductPage() {
     }
     const packVariants = draftsToVariants(variants);
     if (variants.length && !packVariants.length) {
-      setError("Fill pack label and price, or remove empty pack rows");
+      setError("Fill size/option label and price, or remove empty rows");
       return;
     }
 
@@ -120,6 +122,7 @@ export default function NewProductPage() {
         category: categoryName,
         stock: Math.max(0, Number.parseInt(stock || "0", 10) || 0),
         variants: packVariants,
+        colors,
         subtitle: subtitle.trim() || undefined,
         brand: brand.trim() || undefined,
         isFeatured,
@@ -206,6 +209,8 @@ export default function NewProductPage() {
           </div>
 
           <PackVariantsEditor variants={variants} onChange={setVariants} />
+
+          <ColorsEditor colors={colors} onChange={setColors} />
 
           <label className="block text-sm font-medium">
             Brand
