@@ -208,7 +208,11 @@ export default function NewProductPage() {
             </label>
           </div>
 
-          <PackVariantsEditor variants={variants} onChange={setVariants} />
+          <PackVariantsEditor
+            variants={variants}
+            onChange={setVariants}
+            defaultPrice={price}
+          />
 
           <ColorsEditor colors={colors} onChange={setColors} />
 

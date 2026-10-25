@@ -9,6 +9,8 @@ export type PackVariantDraft = {
   maxPerOrder: string;
 };
 
+const SHOE_SIZES = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46"];
+
 function slugifyPack(value: string) {
   return value
     .toLowerCase()
@@ -20,9 +22,11 @@ function slugifyPack(value: string) {
 type Props = {
   variants: PackVariantDraft[];
   onChange: (next: PackVariantDraft[]) => void;
+  /** Default price used when quick-adding shoe sizes. */
+  defaultPrice?: string;
 };
 
-export default function PackVariantsEditor({ variants, onChange }: Props) {
+export default function PackVariantsEditor({ variants, onChange, defaultPrice = "" }: Props) {
   const updateRow = (index: number, patch: Partial<PackVariantDraft>) => {
     onChange(
       variants.map((row, i) => {
@@ -36,13 +40,40 @@ export default function PackVariantsEditor({ variants, onChange }: Props) {
     );
   };
 
+  const upsertSize = (label: string, stock: string) => {
+    const existing = variants.findIndex((v) => v.label.trim() === label);
+    if (existing >= 0) {
+      // Clear stock 0 rows only if user emptied the field; keep row so they can edit.
+      updateRow(existing, { stock: stock.trim() === "" ? "0" : stock });
+      return;
+    }
+    if (!stock.trim() || Number(stock) <= 0) return;
+    const price =
+      defaultPrice.trim() ||
+      variants.find((v) => v.price.trim())?.price ||
+      "0";
+    onChange([
+      ...variants,
+      {
+        id: slugifyPack(label) || `size-${label}`,
+        label,
+        price,
+        stock,
+        maxPerOrder: "",
+      },
+    ]);
+  };
+
+  const stockFor = (label: string) =>
+    variants.find((v) => v.label.trim() === label)?.stock ?? "";
+
   const addRow = () => {
     onChange([
       ...variants,
       {
         id: `opt-${variants.length + 1}`,
         label: "",
-        price: "",
+        price: defaultPrice || "",
         stock: "0",
         maxPerOrder: "",
       },
@@ -53,27 +84,76 @@ export default function PackVariantsEditor({ variants, onChange }: Props) {
     onChange(variants.filter((_, i) => i !== index));
   };
 
+  const fillShoeSizes = () => {
+    const price = defaultPrice || variants[0]?.price || "";
+    const next = [...variants];
+    for (const size of SHOE_SIZES) {
+      if (next.some((v) => v.label.trim() === size)) continue;
+      next.push({
+        id: `size-${size}`,
+        label: size,
+        price,
+        stock: "0",
+        maxPerOrder: "",
+      });
+    }
+    onChange(next);
+  };
+
   return (
-    <div className="rounded-xl border border-neutral-200 bg-[#FAFAFA] p-4">
-      <div className="flex items-start justify-between gap-3">
+    <div className="space-y-4 rounded-xl border border-neutral-200 bg-[#FAFAFA] p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-neutral-900">Sizes / options</p>
+          <p className="text-sm font-medium text-neutral-900">Sizes / options (with stock)</p>
           <p className="mt-1 text-xs text-neutral-500">
-            Add each size or pack buyers must pick (e.g. 36, 41, 45 or 5 pieces). Set stock per
-            option, and optional max per order so one buyer cannot take all of one size.
+            Type how many pairs you have for each size. Buyers will pick a size on the product page.
+            Leave stock at 0 to hide that size as sold out, or remove the row.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={addRow}
-          className="shrink-0 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
-        >
-          Add size
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={fillShoeSizes}
+            className="shrink-0 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+          >
+            Add shoe sizes 36-46
+          </button>
+          <button
+            type="button"
+            onClick={addRow}
+            className="shrink-0 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+          >
+            Add custom option
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-neutral-200 bg-white p-3">
+        <p className="text-xs font-medium text-neutral-700">Quick stock by shoe size</p>
+        <p className="mt-0.5 text-[11px] text-neutral-500">
+          Enter available quantity for each size. Empty or 0 means not offered / sold out.
+        </p>
+        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+          {SHOE_SIZES.map((size) => (
+            <label key={size} className="block text-center text-xs font-semibold text-neutral-700">
+              {size}
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={stockFor(size)}
+                onChange={(e) => upsertSize(size, e.target.value)}
+                placeholder="0"
+                className="mt-1 w-full rounded-lg border border-neutral-300 px-2 py-2 text-center text-sm outline-none focus:border-[#4B0A6B]"
+              />
+            </label>
+          ))}
+        </div>
       </div>
 
       {variants.length > 0 && (
-        <ul className="mt-4 space-y-3">
+        <ul className="space-y-3">
+          <p className="text-xs font-medium text-neutral-600">All options (edit price / max per order)</p>
           {variants.map((row, index) => (
             <li
               key={`${row.id}-${index}`}
@@ -141,7 +221,7 @@ export default function PackVariantsEditor({ variants, onChange }: Props) {
 
 export function draftsToVariants(drafts: PackVariantDraft[]) {
   return drafts
-    .filter((d) => d.label.trim() && Number.isFinite(Number(d.price)))
+    .filter((d) => d.label.trim() && Number.isFinite(Number(d.price)) && Number(d.price) >= 0)
     .map((d, index) => {
       const maxRaw = d.maxPerOrder.trim();
       const maxParsed = maxRaw ? Number.parseInt(maxRaw, 10) : undefined;
