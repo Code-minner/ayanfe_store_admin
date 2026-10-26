@@ -5,19 +5,18 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import TopBar from "@/components/admin/TopBar";
 import AdminMain from "@/components/admin/AdminMain";
-import ProductThumb from "@/components/admin/ProductThumb";
 import ColorsEditor from "@/components/admin/ColorsEditor";
 import PackVariantsEditor, {
   draftsToVariants,
   variantsToDrafts,
   type PackVariantDraft,
 } from "@/components/admin/PackVariantsEditor";
+import ProductImagesEditor from "@/components/admin/ProductImagesEditor";
 import { useAuth } from "@/context/AuthContext";
 import {
   apiGetCategories,
   apiGetProduct,
   apiUpdateProduct,
-  apiUploadProductImage,
   type AdminProduct,
 } from "@/lib/api";
 
@@ -53,7 +52,6 @@ export default function ProductEditPage() {
   const [isNewArrival, setIsNewArrival] = useState(false);
   const [active, setActive] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -76,6 +74,8 @@ export default function ProductEditPage() {
         setSlug(p.slug);
         setPrice(String(p.price ?? ""));
         setStock(String(p.stock ?? 0));
+        // Only load options the admin already saved. Do not auto-import subtitle
+        // sizes (that would force the storefront picker on legacy products).
         setVariants(variantsToDrafts(p.variants));
         setColors(Array.isArray(p.colors) ? p.colors : []);
         setCategorySlug(p.categorySlug);
@@ -102,24 +102,6 @@ export default function ProductEditPage() {
     () => categories.find((c) => c.slug === categorySlug)?.name || categorySlug,
     [categories, categorySlug]
   );
-
-  const onUpload = async (file: File | null) => {
-    if (!file || !token) return;
-    setUploading(true);
-    setError("");
-    try {
-      const uploaded = await apiUploadProductImage(token, file);
-      setImageUrl(uploaded.url);
-      setGallery((prev) => {
-        const next = [uploaded.url, ...prev.filter((u) => u !== uploaded.url)];
-        return next;
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -258,6 +240,16 @@ export default function ProductEditPage() {
           </label>
 
           <label className="block text-sm font-medium">
+            Brand
+            <input
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="e.g. TITANIUM, AYE01 (shows on the store)"
+              className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
+            />
+          </label>
+
+          <label className="block text-sm font-medium">
             Slug
             <input
               value={slug}
@@ -280,7 +272,7 @@ export default function ProductEditPage() {
                 className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
               />
               <span className="mt-1 block text-xs text-neutral-500">
-                Used when there are no packs. With packs, price becomes the lowest pack price.
+                Used when there are no options. With options, price becomes the lowest option price.
               </span>
             </label>
             <label className="block text-sm font-medium">
@@ -300,6 +292,8 @@ export default function ProductEditPage() {
             variants={variants}
             onChange={setVariants}
             defaultPrice={price}
+            subtitleHint={subtitle}
+            totalStockHint={Number.parseInt(stock || "0", 10) || 0}
           />
 
           <ColorsEditor colors={colors} onChange={setColors} />
@@ -330,26 +324,15 @@ export default function ProductEditPage() {
             />
           </label>
 
-          <div className="grid gap-5 sm:grid-cols-2">
-            <label className="block text-sm font-medium">
-              Brand
-              <input
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                placeholder="e.g. TITANIUM, AYE01"
-                className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
-              />
-            </label>
-            <label className="block text-sm font-medium">
-              Badge
-              <input
-                value={badge}
-                onChange={(e) => setBadge(e.target.value)}
-                placeholder="e.g. Sale, New"
-                className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
-              />
-            </label>
-          </div>
+          <label className="block text-sm font-medium">
+            Badge
+            <input
+              value={badge}
+              onChange={(e) => setBadge(e.target.value)}
+              placeholder="e.g. Sale, New"
+              className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
+            />
+          </label>
 
           <label className="block text-sm font-medium">
             Subtitle
@@ -361,62 +344,14 @@ export default function ProductEditPage() {
             />
           </label>
 
-          <div>
-            <p className="text-sm font-medium">Main image</p>
-            <div className="mt-2 flex flex-wrap items-start gap-4">
-              <label className="inline-flex cursor-pointer items-center rounded-xl border border-neutral-300 px-4 py-2.5 text-sm font-medium hover:bg-neutral-50">
-                {uploading ? "Uploading..." : "Upload image"}
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  disabled={uploading || !token}
-                  onChange={(e) => void onUpload(e.target.files?.[0] || null)}
-                />
-              </label>
-              <input
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="Image URL"
-                className="min-w-[240px] flex-1 rounded-xl border border-neutral-300 px-3.5 py-2.5 text-sm outline-none focus:border-[#4B0A6B]"
-              />
-            </div>
-            {imageUrl ? (
-              <div className="mt-3">
-                <ProductThumb src={imageUrl} alt="" size={112} className="rounded-xl" />
-              </div>
-            ) : null}
-          </div>
-
-          {gallery.length > 0 && (
-            <div>
-              <p className="text-sm font-medium">Gallery</p>
-              <div className="mt-3 flex flex-wrap gap-3">
-                {gallery.map((src) => (
-                  <div key={src} className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setImageUrl(src)}
-                      className={`block overflow-hidden rounded-xl border bg-white ${
-                        src === imageUrl ? "border-[#4B0A6B]" : "border-neutral-200"
-                      }`}
-                      title="Set as main image"
-                    >
-                      <ProductThumb src={src} alt="" size={80} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setGallery((prev) => prev.filter((u) => u !== src))}
-                      className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-neutral-900 text-[10px] text-white"
-                      aria-label="Remove image"
-                    >
-                      x
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <ProductImagesEditor
+            mainUrl={imageUrl}
+            gallery={gallery}
+            onMainChange={setImageUrl}
+            onGalleryChange={setGallery}
+            token={token}
+            onError={setError}
+          />
 
           <div className="flex flex-wrap gap-5 text-sm">
             <label className="inline-flex items-center gap-2">
@@ -444,7 +379,7 @@ export default function ProductEditPage() {
           <div className="flex flex-wrap gap-3 pt-2">
             <button
               type="submit"
-              disabled={saving || uploading}
+              disabled={saving}
               className="rounded-xl bg-[#4B0A6B] px-6 py-3 text-sm font-semibold text-white hover:bg-[#3a0854] disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save changes"}

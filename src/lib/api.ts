@@ -105,7 +105,13 @@ export async function apiUpdateOrderStatus(token: string, id: string, status: st
 
 export async function apiGetProducts(
   token?: string | null,
-  opts?: { page?: number; limit?: number; q?: string; status?: "all" | "active" | "inactive" }
+  opts?: {
+    page?: number;
+    limit?: number;
+    q?: string;
+    status?: "all" | "active" | "inactive";
+    stock?: "all" | "in" | "out";
+  }
 ) {
   const qs = new URLSearchParams({
     admin: "true",
@@ -115,6 +121,7 @@ export async function apiGetProducts(
   });
   if (opts?.q?.trim()) qs.set("q", opts.q.trim());
   if (opts?.status && opts.status !== "all") qs.set("status", opts.status);
+  if (opts?.stock && opts.stock !== "all") qs.set("stock", opts.stock);
 
   const res = await fetch(`${API_URL}/products?${qs}`, {
     headers: authHeaders(token),

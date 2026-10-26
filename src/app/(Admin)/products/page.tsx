@@ -8,7 +8,12 @@ import RequirePermission from "@/components/admin/RequirePermission";
 import ProductThumb from "@/components/admin/ProductThumb";
 import SearchInput from "@/components/ui/SearchInput";
 import { useAuth } from "@/context/AuthContext";
-import { apiDeleteProduct, apiGetProducts, type AdminProduct } from "@/lib/api";
+import {
+  apiDeleteProduct,
+  apiGetProducts,
+  apiUpdateProduct,
+  type AdminProduct,
+} from "@/lib/api";
 import { formatDate, formatNaira } from "@/lib/format";
 
 const PAGE_SIZE = 20;
@@ -17,7 +22,8 @@ export default function ProductsPage() {
   const { token } = useAuth();
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
-  const [status, setStatus] = useState<"active" | "inactive" | "all">("active");
+  const [status, setStatus] = useState<"active" | "inactive" | "all">("all");
+  const [stockFilter, setStockFilter] = useState<"all" | "in" | "out">("all");
   const [page, setPage] = useState(1);
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [total, setTotal] = useState(0);
@@ -25,6 +31,8 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [savingStockId, setSavingStockId] = useState<string | null>(null);
+  const [stockDrafts, setStockDrafts] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -34,7 +42,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedQ, status]);
+  }, [debouncedQ, status, stockFilter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,11 +55,20 @@ export default function ProductsPage() {
           limit: PAGE_SIZE,
           q: debouncedQ || undefined,
           status,
+          stock: stockFilter,
         });
         if (cancelled) return;
-        setProducts(data.products || []);
+        const list = data.products || [];
+        setProducts(list);
         setTotal(data.total ?? 0);
         setTotalPages(data.totalPages ?? 1);
+        setStockDrafts((prev) => {
+          const next = { ...prev };
+          for (const p of list) {
+            if (next[p.id] === undefined) next[p.id] = String(p.stock ?? 0);
+          }
+          return next;
+        });
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Could not load products");
@@ -63,7 +80,7 @@ export default function ProductsPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, page, debouncedQ, status]);
+  }, [token, page, debouncedQ, status, stockFilter]);
 
   const pageNumbers = useMemo(() => {
     const maxButtons = 5;
@@ -97,6 +114,29 @@ export default function ProductsPage() {
     }
   };
 
+  const saveStock = async (product: AdminProduct) => {
+    if (!token) return;
+    const raw = stockDrafts[product.id] ?? String(product.stock ?? 0);
+    const nextStock = Math.max(0, Number.parseInt(raw, 10) || 0);
+    if (nextStock === (product.stock ?? 0)) return;
+    setSavingStockId(product.id);
+    setError("");
+    try {
+      const { product: updated } = await apiUpdateProduct(token, product.id, {
+        stock: nextStock,
+      });
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, stock: updated.stock } : p))
+      );
+      setStockDrafts((prev) => ({ ...prev, [product.id]: String(updated.stock ?? nextStock) }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update stock");
+      setStockDrafts((prev) => ({ ...prev, [product.id]: String(product.stock ?? 0) }));
+    } finally {
+      setSavingStockId(null);
+    }
+  };
+
   return (
     <RequirePermission permission="products">
       <TopBar breadcrumb={<span className="font-semibold text-neutral-900">Products</span>} />
@@ -107,7 +147,7 @@ export default function ProductsPage() {
             <p className="mt-1 text-sm text-neutral-500">
               {loading
                 ? "Loading..."
-                : `${total} ${status === "all" ? "" : status + " "}product${total === 1 ? "" : "s"} | page ${page} of ${totalPages}`}
+                : `${total} product${total === 1 ? "" : "s"} | page ${page} of ${totalPages}`}
             </p>
           </div>
           <Link
@@ -121,27 +161,51 @@ export default function ProductsPage() {
         <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
           <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
             <SearchInput value={q} onChange={setQ} placeholder="Search name, slug, category..." />
-            <div className="inline-flex rounded-xl border border-neutral-200 bg-neutral-50 p-1">
-              {(
-                [
-                  ["active", "Active"],
-                  ["inactive", "Inactive"],
-                  ["all", "All"],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setStatus(key)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                    status === key
-                      ? "bg-white text-[#4B0A6B] shadow-sm"
-                      : "text-neutral-500 hover:text-neutral-800"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="flex flex-wrap gap-2">
+              <div className="inline-flex rounded-xl border border-neutral-200 bg-neutral-50 p-1">
+                {(
+                  [
+                    ["all", "All"],
+                    ["active", "Active"],
+                    ["inactive", "Inactive"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setStatus(key)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                      status === key
+                        ? "bg-white text-[#4B0A6B] shadow-sm"
+                        : "text-neutral-500 hover:text-neutral-800"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="inline-flex rounded-xl border border-neutral-200 bg-neutral-50 p-1">
+                {(
+                  [
+                    ["all", "Any stock"],
+                    ["in", "In stock"],
+                    ["out", "Out of stock"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setStockFilter(key)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                      stockFilter === key
+                        ? "bg-white text-[#4B0A6B] shadow-sm"
+                        : "text-neutral-500 hover:text-neutral-800"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
@@ -169,73 +233,115 @@ export default function ProductsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {products.map((p) => (
-                      <tr key={p.id} className="border-b border-neutral-100 last:border-0">
-                        <td className="px-3 py-3">
-                          <div className="flex items-center gap-3">
-                            <ProductThumb src={p.image} alt={p.name} size={40} />
-                            <div>
-                              <p className="font-medium">{p.name}</p>
-                              <p className="text-xs text-neutral-500">{p.slug}</p>
+                    {products.map((p) => {
+                      const oos = (p.stock ?? 0) <= 0;
+                      const draft = stockDrafts[p.id] ?? String(p.stock ?? 0);
+                      const dirty = Number.parseInt(draft, 10) !== (p.stock ?? 0);
+                      return (
+                        <tr key={p.id} className="border-b border-neutral-100 last:border-0">
+                          <td className="px-3 py-3">
+                            <div className="flex items-center gap-3">
+                              <ProductThumb src={p.image} alt={p.name} size={40} />
+                              <div>
+                                <p className="font-medium">{p.name}</p>
+                                <p className="text-xs text-neutral-500">{p.slug}</p>
+                                {oos ? (
+                                  <p className="mt-0.5 text-[11px] font-medium text-red-600">
+                                    Out of stock
+                                  </p>
+                                ) : null}
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-3 py-3 text-neutral-600">{p.category || p.categorySlug}</td>
-                        <td className="px-3 py-3 text-neutral-600">
-                          {p.price > 0 ? formatNaira(p.price) : (
-                            <span className="text-amber-700">No price</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-3 text-neutral-600">{p.stock ?? "-"}</td>
-                        <td className="px-3 py-3">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              p.active === false
-                                ? "bg-neutral-100 text-neutral-600"
-                                : "bg-emerald-50 text-emerald-700"
-                            }`}
-                          >
-                            {p.active === false ? "Inactive" : "Active"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3 text-neutral-600">
-                          {p.createdAt ? formatDate(p.createdAt) : "-"}
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          <div className="inline-flex items-center gap-2">
-                            <Link
-                              href={`/products/${p.id}`}
-                              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-[#4B0A6B] hover:bg-[#F3E6F6]"
-                            >
-                              Edit
-                            </Link>
-                            <button
-                              type="button"
-                              disabled={deletingId === p.id}
-                              onClick={() => void onDelete(p)}
-                              aria-label={`Delete ${p.name}`}
-                              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-                            >
-                              <svg
-                                viewBox="0 0 24 24"
-                                className="h-4 w-4"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.8"
-                                aria-hidden
-                              >
-                                <path
-                                  d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
+                          </td>
+                          <td className="px-3 py-3 text-neutral-600">
+                            {p.category || p.categorySlug}
+                          </td>
+                          <td className="px-3 py-3 text-neutral-600">
+                            {p.price > 0 ? (
+                              formatNaira(p.price)
+                            ) : (
+                              <span className="text-amber-700">No price</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step={1}
+                                  value={draft}
+                                  onChange={(e) =>
+                                    setStockDrafts((prev) => ({
+                                      ...prev,
+                                      [p.id]: e.target.value,
+                                    }))
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") void saveStock(p);
+                                  }}
+                                  className={`w-20 rounded-lg border px-2 py-1.5 text-sm outline-none focus:border-[#4B0A6B] ${
+                                    oos
+                                      ? "border-red-200 bg-red-50 text-red-800"
+                                      : "border-neutral-300"
+                                  }`}
+                                  aria-label={`Stock for ${p.name}`}
                                 />
-                              </svg>
-                              {deletingId === p.id ? "Deleting..." : "Delete"}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                                <button
+                                  type="button"
+                                  disabled={!dirty || savingStockId === p.id || !token}
+                                  onClick={() => void saveStock(p)}
+                                  className="rounded-lg bg-[#4B0A6B] px-2 py-1.5 text-xs font-semibold text-white hover:bg-[#3a0854] disabled:opacity-40"
+                                >
+                                  {savingStockId === p.id ? "..." : "Save"}
+                                </button>
+                              </div>
+                              {Array.isArray(p.variants) && p.variants.length > 0 ? (
+                                <Link
+                                  href={`/products/${p.id}`}
+                                  className="text-[11px] font-medium text-[#4B0A6B] hover:underline"
+                                >
+                                  Edit per-size stock
+                                </Link>
+                              ) : null}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                p.active === false
+                                  ? "bg-neutral-100 text-neutral-600"
+                                  : "bg-emerald-50 text-emerald-700"
+                              }`}
+                            >
+                              {p.active === false ? "Inactive" : "Active"}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-neutral-600">
+                            {p.createdAt ? formatDate(p.createdAt) : "-"}
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            <div className="inline-flex items-center gap-2">
+                              <Link
+                                href={`/products/${p.id}`}
+                                className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-[#4B0A6B] hover:bg-[#F3E6F6]"
+                              >
+                                Edit
+                              </Link>
+                              <button
+                                type="button"
+                                disabled={deletingId === p.id}
+                                onClick={() => void onDelete(p)}
+                                aria-label={`Delete ${p.name}`}
+                                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                              >
+                                {deletingId === p.id ? "Deleting..." : "Delete"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

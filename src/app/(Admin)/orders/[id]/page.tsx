@@ -214,7 +214,9 @@ export default function OrderDetailsPage() {
                     {[
                       item.brand ? `Brand: ${item.brand}` : null,
                       item.color ? `Color: ${item.color}` : null,
-                      item.size ? `Size: ${item.size}` : null,
+                      item.size
+                        ? `${/^\d{2,3}$/.test(item.size.trim()) || /^age\s*\d+/i.test(item.size.trim()) || /^(xxs|xs|s|m|l|xl|xxl|xxxl)$/i.test(item.size.trim()) ? "Size" : "Option"}: ${item.size}`
+                        : null,
                       `Qty ${item.quantity}`,
                     ]
                       .filter(Boolean)

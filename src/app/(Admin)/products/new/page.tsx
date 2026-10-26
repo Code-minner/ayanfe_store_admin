@@ -1,22 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
 import AdminMain from "@/components/admin/AdminMain";
-import ProductThumb from "@/components/admin/ProductThumb";
 import ColorsEditor from "@/components/admin/ColorsEditor";
 import PackVariantsEditor, {
   draftsToVariants,
   type PackVariantDraft,
 } from "@/components/admin/PackVariantsEditor";
+import ProductImagesEditor from "@/components/admin/ProductImagesEditor";
 import { useAuth } from "@/context/AuthContext";
-import {
-  apiCreateProduct,
-  apiGetCategories,
-  apiUploadProductImage,
-} from "@/lib/api";
+import { apiCreateProduct, apiGetCategories } from "@/lib/api";
 
 function slugify(value: string) {
   return value
@@ -30,7 +25,6 @@ function slugify(value: string) {
 
 export default function NewProductPage() {
   const { token } = useAuth();
-  const router = useRouter();
   const [categories, setCategories] = useState<{ slug: string; name: string }[]>([]);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -42,14 +36,16 @@ export default function NewProductPage() {
   const [categorySlug, setCategorySlug] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [gallery, setGallery] = useState<string[]>([]);
   const [subtitle, setSubtitle] = useState("");
   const [brand, setBrand] = useState("");
   const [isFeatured, setIsFeatured] = useState(false);
   const [isNewArrival, setIsNewArrival] = useState(false);
   const [active, setActive] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [createdId, setCreatedId] = useState<string | null>(null);
+  const [createdName, setCreatedName] = useState("");
 
   useEffect(() => {
     apiGetCategories()
@@ -73,18 +69,24 @@ export default function NewProductPage() {
     if (!slugTouched) setSlug(slugify(value));
   };
 
-  const onUpload = async (file: File | null) => {
-    if (!file || !token) return;
-    setUploading(true);
+  const resetForm = () => {
+    setName("");
+    setSlug("");
+    setSlugTouched(false);
+    setPrice("");
+    setStock("50");
+    setVariants([]);
+    setColors([]);
+    setDescription("");
+    setImageUrl("");
+    setGallery([]);
+    setSubtitle("");
+    setBrand("");
+    setIsFeatured(false);
+    setIsNewArrival(false);
+    setActive(true);
     setError("");
-    try {
-      const uploaded = await apiUploadProductImage(token, file);
-      setImageUrl(uploaded.url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setUploading(false);
-    }
+    if (categories[0]) setCategorySlug(categories[0].slug);
   };
 
   const onSubmit = async (e: FormEvent) => {
@@ -94,8 +96,9 @@ export default function NewProductPage() {
       return;
     }
     const parsedPrice = Number(price);
-    if (!name.trim() || !slug.trim() || !categorySlug || !imageUrl.trim()) {
-      setError("Name, slug, category, and image are required");
+    const main = imageUrl.trim() || gallery[0] || "";
+    if (!name.trim() || !slug.trim() || !categorySlug || !main) {
+      setError("Name, slug, category, and at least one image are required");
       return;
     }
     if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
@@ -108,15 +111,22 @@ export default function NewProductPage() {
       return;
     }
 
+    const images = gallery.length
+      ? gallery.includes(main)
+        ? gallery
+        : [main, ...gallery]
+      : [main];
+
     setSaving(true);
     setError("");
+    setCreatedId(null);
     try {
       const { product } = await apiCreateProduct(token, {
         name: name.trim(),
         slug: slug.trim(),
         description: description.trim(),
-        image: imageUrl.trim(),
-        images: [imageUrl.trim()],
+        image: main,
+        images,
         price: parsedPrice,
         categorySlug,
         category: categoryName,
@@ -129,7 +139,9 @@ export default function NewProductPage() {
         isNewArrival,
         active,
       });
-      router.push(`/products/${product.id}`);
+      setCreatedId(product.id);
+      setCreatedName(product.name);
+      resetForm();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create product");
     } finally {
@@ -151,12 +163,33 @@ export default function NewProductPage() {
       />
       <AdminMain>
         <h1 className="text-2xl font-semibold">Add product</h1>
-        <p className="mt-1 text-sm text-neutral-500">Create a new catalog item for the storefront.</p>
+        <p className="mt-1 text-sm text-neutral-500">
+          Create a catalog item. After saving you stay here to add another.
+        </p>
 
         <form
           onSubmit={onSubmit}
           className="mt-6 max-w-3xl space-y-5 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm"
         >
+          {createdId ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+              <p className="font-medium">
+                &ldquo;{createdName}&rdquo; created. Form cleared for the next product.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-3">
+                <Link
+                  href={`/products/${createdId}`}
+                  className="font-semibold text-[#4B0A6B] hover:underline"
+                >
+                  Open it to edit
+                </Link>
+                <Link href="/products" className="font-semibold text-neutral-700 hover:underline">
+                  Back to list
+                </Link>
+              </div>
+            </div>
+          ) : null}
+
           {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
           <label className="block text-sm font-medium">
@@ -165,6 +198,16 @@ export default function NewProductPage() {
               value={name}
               onChange={(e) => onNameChange(e.target.value)}
               required
+              className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
+            />
+          </label>
+
+          <label className="block text-sm font-medium">
+            Brand
+            <input
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="e.g. TITANIUM, AYE01 (shows on the store)"
               className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
             />
           </label>
@@ -212,19 +255,11 @@ export default function NewProductPage() {
             variants={variants}
             onChange={setVariants}
             defaultPrice={price}
+            subtitleHint={subtitle}
+            totalStockHint={Number.parseInt(stock || "0", 10) || 0}
           />
 
           <ColorsEditor colors={colors} onChange={setColors} />
-
-          <label className="block text-sm font-medium">
-            Brand
-            <input
-              value={brand}
-              onChange={(e) => setBrand(e.target.value)}
-              placeholder="e.g. TITANIUM, AYE01"
-              className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
-            />
-          </label>
 
           <label className="block text-sm font-medium">
             Category
@@ -262,32 +297,14 @@ export default function NewProductPage() {
             />
           </label>
 
-          <div>
-            <p className="text-sm font-medium">Product image</p>
-            <div className="mt-2 flex flex-wrap items-start gap-4">
-              <label className="inline-flex cursor-pointer items-center rounded-xl border border-neutral-300 px-4 py-2.5 text-sm font-medium hover:bg-neutral-50">
-                {uploading ? "Uploading..." : "Upload image"}
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  disabled={uploading || !token}
-                  onChange={(e) => void onUpload(e.target.files?.[0] || null)}
-                />
-              </label>
-              <input
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="Or paste image URL"
-                className="min-w-[240px] flex-1 rounded-xl border border-neutral-300 px-3.5 py-2.5 text-sm outline-none focus:border-[#4B0A6B]"
-              />
-            </div>
-            {imageUrl ? (
-              <div className="mt-3">
-                <ProductThumb src={imageUrl} alt="" size={112} className="rounded-xl" />
-              </div>
-            ) : null}
-          </div>
+          <ProductImagesEditor
+            mainUrl={imageUrl}
+            gallery={gallery}
+            onMainChange={setImageUrl}
+            onGalleryChange={setGallery}
+            token={token}
+            onError={setError}
+          />
 
           <div className="flex flex-wrap gap-5 text-sm">
             <label className="inline-flex items-center gap-2">
@@ -315,7 +332,7 @@ export default function NewProductPage() {
           <div className="flex flex-wrap gap-3 pt-2">
             <button
               type="submit"
-              disabled={saving || uploading}
+              disabled={saving}
               className="rounded-xl bg-[#4B0A6B] px-6 py-3 text-sm font-semibold text-white hover:bg-[#3a0854] disabled:opacity-50"
             >
               {saving ? "Saving..." : "Create product"}
