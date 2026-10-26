@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import TopBar from "@/components/admin/TopBar";
 import AdminMain from "@/components/admin/AdminMain";
@@ -9,16 +10,39 @@ import StatusPill from "@/components/ui/StatusPill";
 import Modal from "@/components/ui/Modal";
 import { useAuth } from "@/context/AuthContext";
 import {
+  apiDeleteStaff,
   apiGetAdmins,
   apiInviteAdmin,
+  apiSetStaffRole,
+  apiSetStaffStatus,
   type AdminStaff,
   type InviteStaffRole,
 } from "@/lib/api";
-import { MOCK_ROLES, PERMISSIONS } from "@/lib/mock";
 import { formatDate } from "@/lib/format";
+import {
+  PERMISSION_META,
+  STAFF_ROLES,
+  permissionsFor,
+  roleBlurb,
+  roleLabel,
+  type StaffRole,
+} from "@/lib/roles";
+
+function staffRoleKey(a: AdminStaff): StaffRole | null {
+  if (a.roleKey && STAFF_ROLES.includes(a.roleKey as StaffRole)) {
+    return a.roleKey as StaffRole;
+  }
+  const lower = a.role.toLowerCase().replace(/\s+/g, "_");
+  if (STAFF_ROLES.includes(lower as StaffRole)) return lower as StaffRole;
+  if (a.role === "Customer Care") return "support";
+  if (a.role === "Admin") return "admin";
+  if (a.role === "Super Admin") return "super_admin";
+  return null;
+}
 
 export default function AdminsPage() {
-  const { token, role, can } = useAuth();
+  const { token, role, can, user } = useAuth();
+  const manage = can("manage_staff");
   const [tab, setTab] = useState<"admins" | "roles">("admins");
   const [q, setQ] = useState("");
   const [admins, setAdmins] = useState<AdminStaff[]>([]);
@@ -32,15 +56,11 @@ export default function AdminsPage() {
   const [inviteRole, setInviteRole] = useState<InviteStaffRole>("support");
   const [inviting, setInviting] = useState(false);
   const [viewAdmin, setViewAdmin] = useState<AdminStaff | null>(null);
-  const [roleModal, setRoleModal] = useState<"add" | "edit" | null>(null);
-  const [roleTitle, setRoleTitle] = useState("Admin");
-  const [perms, setPerms] = useState<string[]>([
-    "KYC Approval",
-    "Edit User",
-    "Read Products",
-    "Delete Products",
-    "Approve Products",
-  ]);
+  const [statusTarget, setStatusTarget] = useState<AdminStaff | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminStaff | null>(null);
+  const [roleTarget, setRoleTarget] = useState<AdminStaff | null>(null);
+  const [nextRole, setNextRole] = useState<InviteStaffRole>("support");
+  const [busy, setBusy] = useState(false);
 
   const load = async () => {
     if (!token) return;
@@ -72,10 +92,6 @@ export default function AdminsPage() {
     [admins, q]
   );
 
-  const togglePerm = (p: string) => {
-    setPerms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
-  };
-
   const onInvite = async (e: FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -101,6 +117,58 @@ export default function AdminsPage() {
     }
   };
 
+  const confirmStatus = async () => {
+    if (!token || !statusTarget) return;
+    setBusy(true);
+    setError("");
+    try {
+      const data = await apiSetStaffStatus(token, statusTarget.id, !statusTarget.active);
+      setAdmins((prev) => prev.map((a) => (a.id === data.admin.id ? data.admin : a)));
+      setMessage(
+        data.admin.active
+          ? `${data.admin.name} reactivated.`
+          : `${data.admin.name} suspended. They cannot sign in.`
+      );
+      setStatusTarget(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update staff status");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!token || !deleteTarget) return;
+    setBusy(true);
+    setError("");
+    try {
+      await apiDeleteStaff(token, deleteTarget.id);
+      setAdmins((prev) => prev.filter((a) => a.id !== deleteTarget.id));
+      setMessage(`${deleteTarget.name} deleted.`);
+      setDeleteTarget(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete staff");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmRole = async () => {
+    if (!token || !roleTarget) return;
+    setBusy(true);
+    setError("");
+    try {
+      const data = await apiSetStaffRole(token, roleTarget.id, nextRole);
+      setAdmins((prev) => prev.map((a) => (a.id === data.admin.id ? data.admin : a)));
+      setMessage(`${data.admin.name} is now ${data.admin.role}.`);
+      setRoleTarget(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update role");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const inviteOptions: { value: InviteStaffRole; label: string }[] = [
     { value: "support", label: "Customer Care" },
     { value: "admin", label: "Admin" },
@@ -108,6 +176,18 @@ export default function AdminsPage() {
       ? [{ value: "super_admin" as const, label: "Super Admin" }]
       : []),
   ];
+
+  const canActOn = (a: AdminStaff) => {
+    if (!manage) return false;
+    if (user?.id && a.id === user.id) return false;
+    return true;
+  };
+
+  const canDelete = (a: AdminStaff) => {
+    if (!canActOn(a)) return false;
+    const key = staffRoleKey(a);
+    return key === "support" || key === "admin";
+  };
 
   return (
     <RequirePermission permission="admins">
@@ -130,22 +210,30 @@ export default function AdminsPage() {
                   tab === t ? "border-b-2 border-[#4B0A6B] text-neutral-900" : "text-neutral-500"
                 }`}
               >
-                {t === "admins" ? "staff" : t}
+                {t === "admins" ? "staff" : "roles & access"}
               </button>
             ))}
           </div>
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-            <SearchInput value={q} onChange={setQ} />
-            {can("invite_staff") ? (
-              <button
-                type="button"
-                onClick={() => (tab === "admins" ? setAddOpen(true) : setRoleModal("add"))}
-                className="rounded-xl bg-[#4B0A6B] px-4 py-2.5 text-sm font-semibold text-white"
+            {tab === "admins" ? <SearchInput value={q} onChange={setQ} /> : <div />}
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/access"
+                className="rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
               >
-                {tab === "admins" ? "+ Invite staff" : "+ Add role"}
-              </button>
-            ) : null}
+                My access
+              </Link>
+              {can("invite_staff") && tab === "admins" ? (
+                <button
+                  type="button"
+                  onClick={() => setAddOpen(true)}
+                  className="rounded-xl bg-[#4B0A6B] px-4 py-2.5 text-sm font-semibold text-white"
+                >
+                  + Invite staff
+                </button>
+              ) : null}
+            </div>
           </div>
 
           {message ? <p className="mt-3 text-sm text-emerald-700">{message}</p> : null}
@@ -168,96 +256,145 @@ export default function AdminsPage() {
                   {loading ? (
                     <tr>
                       <td colSpan={6} className="px-3 py-10 text-center text-neutral-500">
-                        Loading admins...
+                        Loading staff...
                       </td>
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-3 py-10 text-center text-neutral-500">
-                        No admins yet. Invite one to get started.
+                        No staff yet. Invite someone to get started.
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((a) => (
-                      <tr key={a.id} className="border-b border-neutral-100 last:border-0">
-                        <td className="px-3 py-3 font-medium">{a.name}</td>
-                        <td className="px-3 py-3 text-neutral-600">{a.email}</td>
-                        <td className="px-3 py-3 text-neutral-600">{a.role}</td>
-                        <td className="px-3 py-3 text-neutral-600">{formatDate(a.dateAdded)}</td>
-                        <td className="px-3 py-3">
-                          <StatusPill status={a.status} />
-                        </td>
-                        <td className="relative px-3 py-3 text-right">
-                          <button
-                            type="button"
-                            className="rounded-lg p-2 hover:bg-neutral-50"
-                            onClick={() => setMenuFor(menuFor === a.id ? null : a.id)}
-                          >
-                            ...
-                          </button>
-                          {menuFor === a.id && (
-                            <div className="absolute right-3 z-10 mt-1 w-44 rounded-xl border border-neutral-200 bg-white py-2 text-left shadow-lg">
-                              <button
-                                type="button"
-                                className="block w-full px-4 py-2 text-left hover:bg-neutral-50"
-                                onClick={() => {
-                                  setViewAdmin(a);
-                                  setMenuFor(null);
-                                }}
-                              >
-                                View admin
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))
+                    filtered.map((a) => {
+                      const key = staffRoleKey(a);
+                      const isSelf = Boolean(user?.id && a.id === user.id);
+                      return (
+                        <tr key={a.id} className="border-b border-neutral-100 last:border-0">
+                          <td className="px-3 py-3 font-medium">
+                            {a.name}
+                            {isSelf ? (
+                              <span className="ml-2 text-xs font-normal text-neutral-400">(you)</span>
+                            ) : null}
+                          </td>
+                          <td className="px-3 py-3 text-neutral-600">{a.email}</td>
+                          <td className="px-3 py-3 text-neutral-600">
+                            {key ? roleLabel(key) : a.role}
+                          </td>
+                          <td className="px-3 py-3 text-neutral-600">{formatDate(a.dateAdded)}</td>
+                          <td className="px-3 py-3">
+                            <StatusPill status={a.status} />
+                          </td>
+                          <td className="relative px-3 py-3 text-right">
+                            <button
+                              type="button"
+                              className="rounded-lg p-2 hover:bg-neutral-50"
+                              onClick={() => setMenuFor(menuFor === a.id ? null : a.id)}
+                            >
+                              ...
+                            </button>
+                            {menuFor === a.id && (
+                              <div className="absolute right-3 z-10 mt-1 w-48 rounded-xl border border-neutral-200 bg-white py-2 text-left shadow-lg">
+                                <button
+                                  type="button"
+                                  className="block w-full px-4 py-2 text-left hover:bg-neutral-50"
+                                  onClick={() => {
+                                    setViewAdmin(a);
+                                    setMenuFor(null);
+                                  }}
+                                >
+                                  View details
+                                </button>
+                                {canActOn(a) ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="block w-full px-4 py-2 text-left hover:bg-neutral-50"
+                                      onClick={() => {
+                                        setNextRole((staffRoleKey(a) as InviteStaffRole) || "support");
+                                        setRoleTarget(a);
+                                        setMenuFor(null);
+                                      }}
+                                    >
+                                      Change role
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="block w-full px-4 py-2 text-left hover:bg-neutral-50"
+                                      onClick={() => {
+                                        setStatusTarget(a);
+                                        setMenuFor(null);
+                                      }}
+                                    >
+                                      {a.active ? "Suspend access" : "Reactivate"}
+                                    </button>
+                                  </>
+                                ) : null}
+                                {canDelete(a) ? (
+                                  <button
+                                    type="button"
+                                    className="block w-full px-4 py-2 text-left text-red-600 hover:bg-red-50"
+                                    onClick={() => {
+                                      setDeleteTarget(a);
+                                      setMenuFor(null);
+                                    }}
+                                  >
+                                    Delete
+                                  </button>
+                                ) : null}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
+              {manage ? (
+                <p className="mt-4 text-xs text-neutral-500">
+                  Suspend blocks sign-in. Delete removes Customer Care or Admin accounts. Super
+                  Admins cannot be deleted here (change their role first).
+                </p>
+              ) : null}
             </div>
           ) : (
-            <div className="mt-5 overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="text-neutral-500">
-                  <tr className="border-b border-neutral-100">
-                    <th className="px-3 py-3 font-medium">Title</th>
-                    <th className="px-3 py-3 font-medium">Permissions</th>
-                    <th className="px-3 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {MOCK_ROLES.map((r) => (
-                    <tr key={r.id} className="border-b border-neutral-100 last:border-0">
-                      <td className="px-3 py-4 align-top font-medium">{r.title}</td>
-                      <td className="px-3 py-4">
-                        <div className="flex flex-wrap gap-2">
-                          {r.permissions.map((p) => (
-                            <span
-                              key={p}
-                              className="rounded-full border border-neutral-200 px-2.5 py-1 text-xs text-neutral-600"
-                            >
-                              {p}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-3 py-4 text-right">
-                        <button
-                          type="button"
-                          className="mr-2 text-neutral-500 hover:text-[#4B0A6B]"
-                          onClick={() => {
-                            setRoleTitle(r.title);
-                            setRoleModal("edit");
-                          }}
-                        >
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mt-5 space-y-5">
+              <p className="text-sm text-neutral-600">
+                Fixed roles for this store. Staff can also open{" "}
+                <Link href="/access" className="font-semibold text-[#4B0A6B] hover:underline">
+                  My access
+                </Link>{" "}
+                to see what their own account can do.
+              </p>
+              <div className="grid gap-4 lg:grid-cols-3">
+                {STAFF_ROLES.map((r) => {
+                  const allowed = new Set(permissionsFor(r));
+                  return (
+                    <article
+                      key={r}
+                      className="rounded-2xl border border-neutral-200 bg-neutral-50/50 p-4"
+                    >
+                      <h3 className="font-semibold text-neutral-900">{roleLabel(r)}</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-neutral-600">
+                        {roleBlurb(r)}
+                      </p>
+                      <ul className="mt-3 space-y-1.5">
+                        {PERMISSION_META.map((p) => (
+                          <li
+                            key={p.key}
+                            className={`text-xs ${
+                              allowed.has(p.key) ? "text-emerald-800" : "text-neutral-400"
+                            }`}
+                          >
+                            {allowed.has(p.key) ? "✓" : "–"} {p.label}
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -322,7 +459,7 @@ export default function AdminsPage() {
         </form>
       </Modal>
 
-      <Modal open={Boolean(viewAdmin)} onClose={() => setViewAdmin(null)} title="Admin details">
+      <Modal open={Boolean(viewAdmin)} onClose={() => setViewAdmin(null)} title="Staff details">
         {viewAdmin && (
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between gap-4">
@@ -335,7 +472,11 @@ export default function AdminsPage() {
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-neutral-500">Role</dt>
-              <dd className="font-medium">{viewAdmin.role}</dd>
+              <dd className="font-medium">
+                {staffRoleKey(viewAdmin)
+                  ? roleLabel(staffRoleKey(viewAdmin)!)
+                  : viewAdmin.role}
+              </dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-neutral-500">Date added</dt>
@@ -352,59 +493,111 @@ export default function AdminsPage() {
       </Modal>
 
       <Modal
-        open={Boolean(roleModal)}
-        onClose={() => setRoleModal(null)}
-        title={roleModal === "edit" ? "Edit role" : "Add new role"}
-        wide
+        open={Boolean(statusTarget)}
+        onClose={() => setStatusTarget(null)}
+        title={statusTarget?.active ? "Suspend staff" : "Reactivate staff"}
       >
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setRoleModal(null);
-          }}
-        >
-          <label className="block text-sm font-medium">
-            Title
-            <input
-              value={roleTitle}
-              onChange={(e) => setRoleTitle(e.target.value)}
-              placeholder="Enter title"
-              className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
-            />
-          </label>
-          <div>
-            <p className="text-sm font-medium">Permissions</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {PERMISSIONS.map((p) => (
-                <label key={p} className="flex items-center gap-2 text-sm text-neutral-700">
-                  <input
-                    type="checkbox"
-                    checked={perms.includes(p)}
-                    onChange={() => togglePerm(p)}
-                    className="h-4 w-4 accent-[#4B0A6B]"
-                  />
-                  {p}
-                </label>
-              ))}
+        {statusTarget ? (
+          <div className="space-y-4">
+            <p className="text-sm text-neutral-600">
+              {statusTarget.active
+                ? `Suspend ${statusTarget.name}? They will not be able to sign in until you reactivate them.`
+                : `Reactivate ${statusTarget.name}? They will be able to sign in again.`}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setStatusTarget(null)}
+                className="rounded-xl bg-neutral-100 px-4 py-2.5 text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void confirmStatus()}
+                className={`rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${
+                  statusTarget.active ? "bg-amber-600" : "bg-[#4B0A6B]"
+                }`}
+              >
+                {busy
+                  ? "Saving..."
+                  : statusTarget.active
+                    ? "Suspend"
+                    : "Reactivate"}
+              </button>
             </div>
           </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setRoleModal(null)}
-              className="rounded-xl bg-neutral-100 px-4 py-2.5 text-sm font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="rounded-xl bg-[#4B0A6B] px-4 py-2.5 text-sm font-semibold text-white"
-            >
-              {roleModal === "edit" ? "Save changes" : "Add Role"}
-            </button>
+        ) : null}
+      </Modal>
+
+      <Modal open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} title="Delete staff">
+        {deleteTarget ? (
+          <div className="space-y-4">
+            <p className="text-sm text-neutral-600">
+              Permanently delete <strong>{deleteTarget.name}</strong> ({deleteTarget.email})? This
+              cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-xl bg-neutral-100 px-4 py-2.5 text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void confirmDelete()}
+                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {busy ? "Deleting..." : "Delete"}
+              </button>
+            </div>
           </div>
-        </form>
+        ) : null}
+      </Modal>
+
+      <Modal open={Boolean(roleTarget)} onClose={() => setRoleTarget(null)} title="Change role">
+        {roleTarget ? (
+          <div className="space-y-4">
+            <p className="text-sm text-neutral-600">
+              Update role for <strong>{roleTarget.name}</strong>.
+            </p>
+            <label className="block text-sm font-medium">
+              Role
+              <select
+                value={nextRole}
+                onChange={(e) => setNextRole(e.target.value as InviteStaffRole)}
+                className="mt-2 w-full rounded-xl border border-neutral-300 px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
+              >
+                {inviteOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setRoleTarget(null)}
+                className="rounded-xl bg-neutral-100 px-4 py-2.5 text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void confirmRole()}
+                className="rounded-xl bg-[#4B0A6B] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {busy ? "Saving..." : "Save role"}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </Modal>
     </RequirePermission>
   );

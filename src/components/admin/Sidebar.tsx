@@ -40,7 +40,7 @@ const NAV: NavItem[] = [
     icon: <Usermanagement className="h-5 w-5" />,
     children: [
       { label: "Customers", href: "/users/customers", permission: "customers" },
-      { label: "Admins", href: "/users/admins", permission: "admins" },
+      { label: "Staff", href: "/users/admins", permission: "admins" },
     ],
   },
   {
@@ -66,6 +66,16 @@ const NAV: NavItem[] = [
     href: "/settings",
     icon: <Setting className="h-5 w-5" />,
     permission: "settings",
+  },
+  {
+    label: "My access",
+    href: "/access",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4z" strokeLinejoin="round" />
+        <path d="M9.5 12l1.8 1.8L14.8 10" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
   },
 ];
 

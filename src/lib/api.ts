@@ -523,3 +523,39 @@ export async function apiInviteAdmin(
   if (!res.ok) throw new Error(data.message || "Could not invite staff");
   return data as { admin: AdminStaff; message: string };
 }
+
+export async function apiSetStaffRole(
+  token: string,
+  id: string,
+  role: InviteStaffRole
+) {
+  const res = await fetch(`${API_URL}/admin/admins/${encodeURIComponent(id)}/role`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify({ role }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not update role");
+  return data as { admin: AdminStaff };
+}
+
+export async function apiSetStaffStatus(token: string, id: string, active: boolean) {
+  const res = await fetch(`${API_URL}/admin/admins/${encodeURIComponent(id)}/status`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify({ active }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not update staff status");
+  return data as { admin: AdminStaff };
+}
+
+export async function apiDeleteStaff(token: string, id: string) {
+  const res = await fetch(`${API_URL}/admin/admins/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(data.message || "Could not delete staff");
+  return data as { ok: boolean; id: string };
+}
