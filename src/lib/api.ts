@@ -176,6 +176,9 @@ export async function apiCreateProduct(
     colors?: string[];
     variants?: AdminProductVariant[];
     subtitle?: string;
+    /** Buy N of this product to unlock bonusPercent off. */
+    bonusQty?: number | null;
+    bonusPercent?: number | null;
   }
 ) {
   const res = await fetch(`${API_URL}/products`, {
@@ -219,6 +222,8 @@ export type ProductWriteBody = {
   variants?: AdminProductVariant[];
   subtitle?: string | null;
   badge?: string | null;
+  bonusQty?: number | null;
+  bonusPercent?: number | null;
 };
 
 export async function apiUpdateProduct(token: string, id: string, body: ProductWriteBody) {
@@ -382,6 +387,9 @@ export type AdminProduct = {
   isNewArrival?: boolean;
   subtitle?: string | null;
   badge?: string | null;
+  /** Min qty of this product to unlock the % bonus. */
+  bonusQty?: number | null;
+  bonusPercent?: number | null;
   colors?: string[];
   variants?: AdminProductVariant[] | null;
   createdAt?: string;

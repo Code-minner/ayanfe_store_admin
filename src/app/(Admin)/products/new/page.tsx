@@ -42,6 +42,8 @@ export default function NewProductPage() {
   const [isFeatured, setIsFeatured] = useState(false);
   const [isNewArrival, setIsNewArrival] = useState(false);
   const [active, setActive] = useState(true);
+  const [bonusQty, setBonusQty] = useState("");
+  const [bonusPercent, setBonusPercent] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -85,6 +87,8 @@ export default function NewProductPage() {
     setIsFeatured(false);
     setIsNewArrival(false);
     setActive(true);
+    setBonusQty("");
+    setBonusPercent("");
     setError("");
     if (categories[0]) setCategorySlug(categories[0].slug);
   };
@@ -108,6 +112,30 @@ export default function NewProductPage() {
     const packVariants = draftsToVariants(variants);
     if (variants.length && !packVariants.length) {
       setError("Fill size/option label and price, or remove empty rows");
+      return;
+    }
+
+    const parsedBonusQty = bonusQty.trim()
+      ? Number.parseInt(bonusQty, 10)
+      : null;
+    const parsedBonusPercent = bonusPercent.trim()
+      ? Number(bonusPercent)
+      : null;
+    if (
+      (parsedBonusQty !== null && (!Number.isFinite(parsedBonusQty) || parsedBonusQty < 1)) ||
+      (parsedBonusPercent !== null &&
+        (!Number.isFinite(parsedBonusPercent) ||
+          parsedBonusPercent <= 0 ||
+          parsedBonusPercent > 100))
+    ) {
+      setError("Quantity bonus: enter a buy qty of 1+ and a percent between 1 and 100, or leave both blank");
+      return;
+    }
+    if (
+      (parsedBonusQty !== null && parsedBonusPercent === null) ||
+      (parsedBonusQty === null && parsedBonusPercent !== null)
+    ) {
+      setError("Quantity bonus needs both buy qty and percent off, or leave both blank");
       return;
     }
 
@@ -138,6 +166,8 @@ export default function NewProductPage() {
         isFeatured,
         isNewArrival,
         active,
+        bonusQty: parsedBonusQty,
+        bonusPercent: parsedBonusPercent,
       });
       setCreatedId(product.id);
       setCreatedName(product.name);
@@ -258,6 +288,43 @@ export default function NewProductPage() {
             subtitleHint={subtitle}
             totalStockHint={Number.parseInt(stock || "0", 10) || 0}
           />
+
+          <fieldset className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-4">
+            <legend className="px-1 text-sm font-semibold text-neutral-900">
+              Quantity bonus (optional)
+            </legend>
+            <p className="mt-1 text-xs text-neutral-600">
+              Example: buy 10 of this product (any size/color combined), get 5% off the unit
+              price. Leave blank for no bonus.
+            </p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-medium">
+                Buy qty
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={bonusQty}
+                  onChange={(e) => setBonusQty(e.target.value)}
+                  placeholder="e.g. 10"
+                  className="mt-2 w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
+                />
+              </label>
+              <label className="block text-sm font-medium">
+                Percent off
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  step="0.1"
+                  value={bonusPercent}
+                  onChange={(e) => setBonusPercent(e.target.value)}
+                  placeholder="e.g. 5"
+                  className="mt-2 w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-3 text-sm outline-none focus:border-[#4B0A6B]"
+                />
+              </label>
+            </div>
+          </fieldset>
 
           <ColorsEditor colors={colors} onChange={setColors} />
 
