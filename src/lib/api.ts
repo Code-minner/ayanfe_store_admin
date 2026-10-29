@@ -368,6 +368,8 @@ export type AdminProductVariant = {
   price: number;
   stock: number;
   maxPerOrder?: number;
+  /** Colors available for this size/option. */
+  colors?: string[];
 };
 
 export type AdminProduct = {

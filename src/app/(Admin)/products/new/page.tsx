@@ -160,7 +160,7 @@ export default function NewProductPage() {
         category: categoryName,
         stock: Math.max(0, Number.parseInt(stock || "0", 10) || 0),
         variants: packVariants,
-        colors,
+        colors: packVariants.length ? [] : colors,
         subtitle: subtitle.trim() || undefined,
         brand: brand.trim() || undefined,
         isFeatured,
@@ -326,7 +326,14 @@ export default function NewProductPage() {
             </div>
           </fieldset>
 
-          <ColorsEditor colors={colors} onChange={setColors} />
+          {variants.length === 0 ? (
+            <ColorsEditor colors={colors} onChange={setColors} />
+          ) : (
+            <p className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs text-neutral-600">
+              Colors are set per size above. Product cards still show the combined color
+              swatches from all sizes.
+            </p>
+          )}
 
           <label className="block text-sm font-medium">
             Category

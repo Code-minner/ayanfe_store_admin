@@ -78,7 +78,8 @@ export default function ProductEditPage() {
         setStock(String(p.stock ?? 0));
         // Only load options the admin already saved. Do not auto-import subtitle
         // sizes (that would force the storefront picker on legacy products).
-        setVariants(variantsToDrafts(p.variants));
+        // Seed per-size colors from product.colors when a size has none (legacy).
+        setVariants(variantsToDrafts(p.variants, p.colors));
         setColors(Array.isArray(p.colors) ? p.colors : []);
         setCategorySlug(p.categorySlug);
         setDescription(p.description || "");
@@ -169,7 +170,8 @@ export default function ProductEditPage() {
         category: categoryName,
         stock: Math.max(0, Number.parseInt(stock || "0", 10) || 0),
         variants: packVariants,
-        colors,
+        // With sizes, colors live on each option (backend flattens for cards).
+        colors: packVariants.length ? [] : colors,
         subtitle: subtitle.trim() || null,
         brand: brand.trim() || null,
         badge: badge.trim() || null,
@@ -180,7 +182,8 @@ export default function ProductEditPage() {
         bonusPercent: parsedBonusPercent,
       });
       setProduct(updated);
-      setVariants(variantsToDrafts(updated.variants));
+      setVariants(variantsToDrafts(updated.variants, updated.colors));
+      setColors(Array.isArray(updated.colors) ? updated.colors : []);
       setPrice(String(updated.price ?? parsedPrice));
       setStock(String(updated.stock ?? 0));
       setSaved(true);
@@ -363,7 +366,14 @@ export default function ProductEditPage() {
             </div>
           </fieldset>
 
-          <ColorsEditor colors={colors} onChange={setColors} />
+          {variants.length === 0 ? (
+            <ColorsEditor colors={colors} onChange={setColors} />
+          ) : (
+            <p className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs text-neutral-600">
+              Colors are set per size above. Product cards still show the combined color
+              swatches from all sizes.
+            </p>
+          )}
 
           <label className="block text-sm font-medium">
             Category

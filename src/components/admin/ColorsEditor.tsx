@@ -32,8 +32,8 @@ export default function ColorsEditor({ colors, onChange }: Props) {
     <div className="rounded-xl border border-neutral-200 bg-[#FAFAFA] p-4">
       <p className="text-sm font-medium text-neutral-900">Colors (optional)</p>
       <p className="mt-1 text-xs text-neutral-500">
-        Optional for any product. Buyers pick a color in the popup or on the product page. Use a
-        hex code or a name (Gold, Brown, Army Green).
+        For products without size options. If you add sizes above, set colors on each size
+        instead. Use a hex code or a name (Gold, Brown, Army Green).
       </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
