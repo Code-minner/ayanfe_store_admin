@@ -22,7 +22,7 @@ export function roleLabel(role: string): string {
 export function roleBlurb(role: string): string {
   switch (role) {
     case "support":
-      return "Handles customers, orders, and payment follow-up. Cannot edit products, settings, or staff.";
+      return "Handles customers, orders, and payment follow-up. Can add and update products, including image uploads. Cannot change settings or staff.";
     case "admin":
       return "Runs day-to-day store ops: products, orders, customers, payments, and invites staff (not Super Admin).";
     case "super_admin":
@@ -109,7 +109,7 @@ export const PERMISSION_META: {
 ];
 
 const PERMS: Record<StaffRole, StaffPermission[]> = {
-  support: ["customers", "orders", "payments"],
+  support: ["customers", "orders", "payments", "products"],
   admin: [
     "dashboard",
     "customers",

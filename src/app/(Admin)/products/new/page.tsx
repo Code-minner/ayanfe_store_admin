@@ -128,14 +128,14 @@ export default function NewProductPage() {
           parsedBonusPercent <= 0 ||
           parsedBonusPercent > 100))
     ) {
-      setError("Quantity bonus: enter a buy qty of 1+ and a percent between 1 and 100, or leave both blank");
+      setError("Quantity bonus: enter a buy quantity of 1+ and a percent between 1 and 100, or leave both blank");
       return;
     }
     if (
       (parsedBonusQty !== null && parsedBonusPercent === null) ||
       (parsedBonusQty === null && parsedBonusPercent !== null)
     ) {
-      setError("Quantity bonus needs both buy qty and percent off, or leave both blank");
+      setError("Quantity bonus needs both buy quantity and percent off, or leave both blank");
       return;
     }
 
@@ -299,7 +299,7 @@ export default function NewProductPage() {
             </p>
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-medium">
-                Buy qty
+                Buy quantity
                 <input
                   type="number"
                   min="1"

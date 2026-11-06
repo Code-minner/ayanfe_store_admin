@@ -217,7 +217,7 @@ export default function OrderDetailsPage() {
                       item.size
                         ? `${/^\d{2,3}$/.test(item.size.trim()) || /^age\s*\d+/i.test(item.size.trim()) || /^(xxs|xs|s|m|l|xl|xxl|xxxl)$/i.test(item.size.trim()) ? "Size" : "Option"}: ${item.size}`
                         : null,
-                      `Qty ${item.quantity}`,
+                      `Quantity ${item.quantity}`,
                     ]
                       .filter(Boolean)
                       .join(" | ")}

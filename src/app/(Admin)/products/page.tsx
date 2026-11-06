@@ -19,7 +19,8 @@ import { formatDate, formatNaira } from "@/lib/format";
 const PAGE_SIZE = 20;
 
 export default function ProductsPage() {
-  const { token } = useAuth();
+  const { token, role } = useAuth();
+  const canDelete = role === "admin" || role === "super_admin";
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [status, setStatus] = useState<"active" | "inactive" | "all">("all");
@@ -328,15 +329,17 @@ export default function ProductsPage() {
                               >
                                 Edit
                               </Link>
-                              <button
-                                type="button"
-                                disabled={deletingId === p.id}
-                                onClick={() => void onDelete(p)}
-                                aria-label={`Delete ${p.name}`}
-                                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-                              >
-                                {deletingId === p.id ? "Deleting..." : "Delete"}
-                              </button>
+                              {canDelete ? (
+                                <button
+                                  type="button"
+                                  disabled={deletingId === p.id}
+                                  onClick={() => void onDelete(p)}
+                                  aria-label={`Delete ${p.name}`}
+                                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                                >
+                                  {deletingId === p.id ? "Deleting..." : "Delete"}
+                                </button>
+                              ) : null}
                             </div>
                           </td>
                         </tr>
