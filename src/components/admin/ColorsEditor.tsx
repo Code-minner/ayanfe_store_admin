@@ -1,5 +1,7 @@
 "use client";
 
+import { colorDisplayName } from "@/lib/format";
+
 type Props = {
   colors: string[];
   onChange: (next: string[]) => void;
@@ -41,7 +43,7 @@ export default function ColorsEditor({ colors, onChange }: Props) {
           <button
             key={p.value}
             type="button"
-            onClick={() => addColor(p.value)}
+            onClick={() => addColor(p.label)}
             className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium hover:border-[#4B0A6B]"
           >
             <span
@@ -89,9 +91,14 @@ export default function ColorsEditor({ colors, onChange }: Props) {
             >
               <span
                 className="h-3.5 w-3.5 rounded-full border border-neutral-300"
-                style={{ backgroundColor: c.startsWith("#") ? c : undefined }}
+                style={{
+                  backgroundColor: c.startsWith("#")
+                    ? c
+                    : PRESETS.find((p) => p.label.toLowerCase() === c.trim().toLowerCase())
+                        ?.value,
+                }}
               />
-              {c}
+              {colorDisplayName(c)}
               <button
                 type="button"
                 onClick={() => removeAt(i)}

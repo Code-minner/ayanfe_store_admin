@@ -10,7 +10,7 @@ import PrintPreviewModal from "@/components/admin/PrintPreviewModal";
 import Modal from "@/components/ui/Modal";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetchPrintOrders, apiGetOrder, apiUpdateOrderStatus, type AdminOrder } from "@/lib/api";
-import { formatDate, formatNaira } from "@/lib/format";
+import { colorDisplayName, formatDate, formatNaira } from "@/lib/format";
 
 const STATUS_ACTIONS = [
   { value: "on_hold", label: "On hold" },
@@ -213,7 +213,7 @@ export default function OrderDetailsPage() {
                   <p className="text-sm text-neutral-500">
                     {[
                       item.brand ? `Brand: ${item.brand}` : null,
-                      item.color ? `Color: ${item.color}` : null,
+                      item.color ? `Color: ${colorDisplayName(item.color)}` : null,
                       item.size
                         ? `${/^\d{2,3}$/.test(item.size.trim()) || /^age\s*\d+/i.test(item.size.trim()) || /^(xxs|xs|s|m|l|xl|xxl|xxxl)$/i.test(item.size.trim()) ? "Size" : "Option"}: ${item.size}`
                         : null,

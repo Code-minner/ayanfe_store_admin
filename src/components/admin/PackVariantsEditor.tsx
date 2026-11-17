@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { colorDisplayName } from "@/lib/format";
 
 export type PackColorDraft = {
   value: string;
@@ -367,7 +368,7 @@ export default function PackVariantsEditor({
                       <button
                         key={p.value}
                         type="button"
-                        onClick={() => addColorToRow(index, p.value)}
+                        onClick={() => addColorToRow(index, p.label)}
                         className="inline-flex items-center gap-1.5 rounded-full border border-neutral-300 bg-white px-2 py-1 text-[11px] font-medium hover:border-[#4B0A6B]"
                       >
                         <span
@@ -414,11 +415,15 @@ export default function PackVariantsEditor({
                           <span
                             className="h-4 w-4 shrink-0 rounded-full border border-neutral-300"
                             style={{
-                              backgroundColor: c.value.startsWith("#") ? c.value : undefined,
+                              backgroundColor: c.value.startsWith("#")
+                                ? c.value
+                                : COLOR_PRESETS.find(
+                                    (p) => p.label.toLowerCase() === c.value.trim().toLowerCase()
+                                  )?.value,
                             }}
                           />
                           <span className="min-w-[5rem] flex-1 text-xs font-medium text-neutral-800">
-                            {c.value}
+                            {colorDisplayName(c.value)}
                           </span>
                           <label className="inline-flex items-center gap-1.5 text-[11px] text-neutral-600">
                             In stock
