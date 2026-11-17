@@ -362,14 +362,19 @@ export async function apiPrintOrders(
   win.document.close();
 }
 
+export type AdminProductVariantColor = {
+  color: string;
+  stock: number;
+};
+
 export type AdminProductVariant = {
   id: string;
   label: string;
   price: number;
   stock: number;
   maxPerOrder?: number;
-  /** Colors available for this size/option. */
-  colors?: string[];
+  /** Colors for this size, each with its own stock. Legacy: string[]. */
+  colors?: Array<string | AdminProductVariantColor>;
 };
 
 export type AdminProduct = {
